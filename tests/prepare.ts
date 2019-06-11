@@ -24,7 +24,7 @@ const spec = () => {
           'write:pets': 'modify things',
         },
         type: 'oauth2',
-      },
+      } as any,
     },
     yaml: true,
   });
