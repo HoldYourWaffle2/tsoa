@@ -81,6 +81,7 @@ export class RouteGenerator {
               parameters: parameterObjs,
               path: normalisedMethodPath,
               security: method.security,
+              type: method.type,
             };
           }),
           modulePath: this.getRelativeImportPath(controller.location),
