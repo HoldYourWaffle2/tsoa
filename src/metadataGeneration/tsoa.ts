@@ -70,6 +70,7 @@ export namespace Tsoa {
 
   export interface Type {
     dataType: 'string' | 'double' | 'float' | 'integer' | 'long' | 'enum' | 'array' | 'datetime' | 'date' | 'buffer' | 'void' | 'object' | 'any' | 'refEnum' | 'refObject';
+    origin?: string;
   }
 
   export interface EnumerateType extends Type {
