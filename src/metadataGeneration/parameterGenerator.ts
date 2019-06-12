@@ -39,7 +39,10 @@ export class ParameterGenerator {
       name: parameterName,
       parameterName,
       required: !parameter.questionToken && !parameter.initializer,
-      type: { dataType: 'object' },
+      type: {
+        dataType: 'object',
+        origin: 'express', // CHECK
+      },
       validators: getParameterValidators(this.parameter, parameterName),
     };
   }

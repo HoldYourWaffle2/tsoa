@@ -96,6 +96,7 @@ export namespace Tsoa {
 
   export interface Type {
     dataType: TypeStringLiteral;
+    origin?: string;
   }
 
   export interface RefTypeMinimal {

@@ -17,6 +17,7 @@ export namespace TsoaRoute {
     enums?: string[];
     properties?: { [name: string]: PropertySchema };
     additionalProperties?: boolean | PropertySchema;
+    origin?: string;
   }
 
   export type ValidatorSchema = Tsoa.Validators;
@@ -24,6 +25,7 @@ export namespace TsoaRoute {
   export interface PropertySchema {
     dataType?: Tsoa.TypeStringLiteral;
     ref?: string;
+    origin?: string;
     required?: boolean;
     array?: PropertySchema;
     enums?: string[];

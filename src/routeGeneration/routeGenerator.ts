@@ -144,19 +144,21 @@ export class RouteGenerator {
           properties[property.name] = this.buildPropertySchema(property);
         });
       }
-      const modelSchema = {
+
+      models[name] = {
         enums: referenceType.enums,
+        origin: referenceType.origin,
         properties: Object.keys(properties).length === 0 ? undefined : properties,
-      } as TsoaRoute.ModelSchema;
+      };
+
       if (referenceType.additionalProperties) {
-        modelSchema.additionalProperties = this.buildProperty(referenceType.additionalProperties);
+        models[name].additionalProperties = this.buildProperty(referenceType.additionalProperties);
       } else if (this.minimalSwaggerConfig.noImplicitAdditionalProperties) {
-        modelSchema.additionalProperties = false;
+        models[name].additionalProperties = false;
       } else {
         // Since Swagger allows "excess properties" (to use a TypeScript term) by default
-        modelSchema.additionalProperties = true;
+        models[name].additionalProperties = true;
       }
-      models[name] = modelSchema;
     });
     return models;
   }
@@ -184,7 +186,7 @@ export class RouteGenerator {
       in: source.in,
       name: source.name,
       required: source.required ? true : undefined,
-    } as TsoaRoute.ParameterSchema;
+    };
     const parameterSchema = Object.assign(parameter, property);
 
     if (Object.keys(source.validators).length > 0) {
@@ -199,25 +201,25 @@ export class RouteGenerator {
       dataType: type.dataType,
     };
 
-    const referenceType = type as Tsoa.ReferenceType;
-    if (referenceType.refName) {
+    if ('refName' in type as any) {
       schema.dataType = undefined;
-      schema.ref = referenceType.refName;
+      schema.ref = (type as Tsoa.ReferenceType).refName;
+      schema.origin = type.origin;
     }
 
     if (type.dataType === 'array') {
       const arrayType = type as Tsoa.ArrayType;
 
-      const arrayRefType = arrayType.elementType as Tsoa.ReferenceType;
-      if (arrayRefType.refName) {
+      if ('refName' in arrayType.elementType as any) {
         schema.array = {
-          ref: arrayRefType.refName,
+          origin: arrayType.elementType.origin,
+          ref: (arrayType.elementType as Tsoa.ReferenceType).refName,
         };
       } else {
         schema.array = {
-          dataType: arrayType.elementType.dataType,
+          dataType: arrayType.elementType.dataType as any, // FIXME type mismatch
           enums: (arrayType.elementType as Tsoa.EnumerateType).enums,
-        } as TsoaRoute.PropertySchema;
+        };
       }
     }
 
