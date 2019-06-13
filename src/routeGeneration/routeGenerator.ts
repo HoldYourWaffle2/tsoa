@@ -41,6 +41,14 @@ export class RouteGenerator {
       return JSON.stringify(context);
     });
 
+    handlebars.registerHelper('importPath', (context: string) => {
+      return this.getRelativeImportPath(context);
+    });
+
+    handlebars.registerHelper('leftmost', (context: string) => {
+      return context.substring(0, context.indexOf('.'));
+    });
+
     const routesTemplate = handlebars.compile(middlewareTemplate, { noEscape: true });
     const authenticationModule = this.options.authenticationModule ? this.getRelativeImportPath(this.options.authenticationModule) : undefined;
     const iocModule = this.options.iocModule ? this.getRelativeImportPath(this.options.iocModule) : undefined;
