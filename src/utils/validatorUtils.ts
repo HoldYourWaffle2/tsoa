@@ -95,7 +95,7 @@ export function getParameterValidators(parameter: ts.ParameterDeclaration, param
     }, {} as Tsoa.Validators);
 }
 
-export function getPropertyValidators(property: ts.PropertyDeclaration): Tsoa.Validators | undefined {
+export function getPropertyValidators(property: ts.PropertyDeclaration): Tsoa.Validators {
     const tags = getJSDocTags(property, (tag) => {
         return getParameterTagSupport().some(value => value === tag.tagName.text);
     });

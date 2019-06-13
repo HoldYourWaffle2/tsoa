@@ -58,16 +58,19 @@ export class TypeResolver {
           }),
         } as Tsoa.EnumerateType;
       } else {
-        return { dataType: 'object' } as Tsoa.Type;
+        return {
+          dataType: 'object',
+          origin: this.typeNode.getSourceFile().fileName, // CHECK correct?
+        };
       }
     }
 
     if (this.typeNode.kind === ts.SyntaxKind.AnyKeyword) {
-      return { dataType: 'any' } as Tsoa.Type;
+      return { dataType: 'any' };
     }
 
     if (this.typeNode.kind === ts.SyntaxKind.TypeLiteral) {
-      return { dataType: 'any' } as Tsoa.Type;
+      return { dataType: 'any' }; // CHECK type literal => any?
     }
 
     if (this.typeNode.kind !== ts.SyntaxKind.TypeReference) {
@@ -81,7 +84,7 @@ export class TypeResolver {
       }
 
       if (typeReference.typeName.text === 'Buffer') {
-        return { dataType: 'buffer' } as Tsoa.Type;
+        return { dataType: 'buffer' };
       }
 
       if (typeReference.typeName.text === 'Array' && typeReference.typeArguments && typeReference.typeArguments.length === 1) {
@@ -96,7 +99,7 @@ export class TypeResolver {
       }
 
       if (typeReference.typeName.text === 'String') {
-        return { dataType: 'string' } as Tsoa.Type;
+        return { dataType: 'string' };
       }
     }
 
@@ -173,7 +176,7 @@ export class TypeResolver {
     }
   }
 
-  private getEnumerateType(typeName: ts.EntityName, extractEnum = true): Tsoa.Type | undefined {
+  private getEnumerateType(typeName: ts.EntityName, extractEnum = true): Tsoa.EnumerateType | Tsoa.ReferenceType | undefined {
     const enumName = (typeName as ts.Identifier).text;
     const enumNodes = this.current.nodes
       .filter((node) => node.kind === ts.SyntaxKind.EnumDeclaration)
@@ -205,15 +208,17 @@ export class TypeResolver {
         dataType: 'refEnum',
         description: this.getNodeDescription(enumDeclaration),
         enums,
+        origin: enumNodes[0].getSourceFile().fileName,
         refName: enumName,
-      } as Tsoa.ReferenceType;
+      };
     } else {
       return {
         dataType: 'enum',
         enums: enumDeclaration.members.map((member: any, index) => {
           return getEnumValue(member) || String(index);
         }),
-      } as Tsoa.EnumerateType;
+        origin: enumNodes[0].getSourceFile().fileName, // CHECK correct?
+      };
     }
   }
 
@@ -221,7 +226,7 @@ export class TypeResolver {
     const literalName = (typeName as ts.Identifier).text;
     const literalTypes = this.current.nodes
       .filter((node) => node.kind === ts.SyntaxKind.TypeAliasDeclaration)
-      .filter((node) => {
+      .filter((node) => { // FIXME liberal 'as any' usage
         const innerType = (node as any).type;
         return innerType.kind === ts.SyntaxKind.UnionType && (innerType as any).types;
       })
@@ -236,7 +241,8 @@ export class TypeResolver {
     return {
       dataType: 'enum',
       enums: unionTypes.map((unionNode: any) => unionNode.literal.text as string),
-    } as Tsoa.EnumerateType;
+      origin: literalTypes[0].getSourceFile().fileName, // CHECK correct?
+    };
   }
 
   private getReferenceType(type: ts.EntityName, extractEnum = true, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.ReferenceType {
@@ -269,18 +275,17 @@ export class TypeResolver {
 
       const referenceType = {
         additionalProperties,
-        dataType: 'refObject',
+        dataType: 'refObject' as 'refObject',
         description: this.getNodeDescription(modelType),
+        example,
+        origin: modelType.getSourceFile().fileName,
         properties: inheritedProperties,
         refName: refNameWithGenerics,
-      } as Tsoa.ReferenceType;
+      };
 
       referenceType.properties = (referenceType.properties as Tsoa.Property[]).concat(properties);
       localReferenceTypeCache[refNameWithGenerics] = referenceType;
 
-      if (example) {
-        referenceType.example = example;
-      }
       return referenceType;
     } catch (err) {
       // tslint:disable-next-line:no-console
@@ -334,12 +339,13 @@ export class TypeResolver {
 
   }
 
-  private createCircularDependencyResolver(refName: string) {
+  private createCircularDependencyResolver(refName: string): Tsoa.ReferenceType {
     const referenceType = {
       dataType: 'refObject',
       refName,
     } as Tsoa.ReferenceType;
 
+    // XXX this doesn't look safe at all
     this.current.OnFinish((referenceTypes) => {
       const realReferenceType = referenceTypes[refName];
       if (!realReferenceType) { return; }
@@ -347,6 +353,7 @@ export class TypeResolver {
       referenceType.properties = realReferenceType.properties;
       referenceType.dataType = realReferenceType.dataType;
       referenceType.refName = referenceType.refName;
+      referenceType.origin = realReferenceType.origin;
     });
 
     return referenceType;
@@ -370,12 +377,23 @@ export class TypeResolver {
     return type as ts.Identifier;
   }
 
-  private resolveModelTypeScope(leftmost: ts.EntityName, statements: any): any[] {
+  private resolveModelTypeScope(leftmost: ts.EntityName, statements: ts.Node[]): ts.NodeArray<ts.Node> { // CHECK correct any narrowing?
+    /*
+      WHILE (there are more quantifiers)
+        Resolve next quantifier using the statements in the 'state'
+        Set 'state' to the statements of the newly found block
+
+      This way the referenced node is narrowed down per-quantification
+    */
+
+    // This is a ts.Node[] on the first step
+    let state: ts.Node[] | ts.NodeArray<ts.Node> = statements;
+
     while (leftmost.parent && leftmost.parent.kind === ts.SyntaxKind.QualifiedName) {
       const leftmostName = leftmost.kind === ts.SyntaxKind.Identifier
         ? (leftmost as ts.Identifier).text
         : (leftmost as ts.QualifiedName).right.text;
-      const moduleDeclarations = statements
+      const moduleDeclarations = state
         .filter((node) => {
           if (node.kind !== ts.SyntaxKind.ModuleDeclaration || !this.current.IsExportedNode(node)) {
             return false;
@@ -397,16 +415,16 @@ export class TypeResolver {
         throw new GenerateMetadataError(`Module declaration found for ${leftmostName} has no body.`);
       }
 
-      statements = moduleBlock.statements;
+      state = moduleBlock.statements;
       leftmost = leftmost.parent as ts.EntityName;
     }
 
-    return statements;
+    return state as ts.NodeArray<ts.Node>;
   }
 
-  private getModelTypeDeclaration(type: ts.EntityName) {
+  private getModelTypeDeclaration(type: ts.EntityName): UsableDeclaration {
     const leftmostIdentifier = this.resolveLeftmostIdentifier(type);
-    const statements: any[] = this.resolveModelTypeScope(leftmostIdentifier, this.current.nodes);
+    const statements: ts.NodeArray<ts.Node> = this.resolveModelTypeScope(leftmostIdentifier, this.current.nodes);
 
     const typeName = type.kind === ts.SyntaxKind.Identifier
       ? (type as ts.Identifier).text
@@ -519,7 +537,7 @@ export class TypeResolver {
             required: !propertyDeclaration.questionToken,
             type: new TypeResolver(aType, this.current, aType.parent).resolve(),
             validators: getPropertyValidators(propertyDeclaration),
-          } as Tsoa.Property;
+          };
         });
     }
 
@@ -595,7 +613,7 @@ export class TypeResolver {
           required: !property.questionToken && !property.initializer,
           type,
           validators: getPropertyValidators(property as ts.PropertyDeclaration),
-        } as Tsoa.Property;
+        };
       });
   }
 

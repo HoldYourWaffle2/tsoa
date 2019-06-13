@@ -23,7 +23,7 @@ export class RouteGenerator {
   constructor(private readonly metadata: Tsoa.Metadata, private readonly options: RoutesConfig) { }
 
   public async GenerateRoutes(middlewareTemplate: string, pathTransformer: (path: string) => string) {
-    const fileName = `${this.options.routesDir}/routes.ts`;
+    const fileName = path.extname(this.options.routesDir) !== '' ? this.options.routesDir : `${this.options.routesDir}/routes.ts`;
     const content = this.buildContent(middlewareTemplate, pathTransformer);
 
     const formatted = await tsfmt.processString(fileName, content, this.tsfmtConfig as any);
@@ -39,6 +39,48 @@ export class RouteGenerator {
   private buildContent(middlewareTemplate: string, pathTransformer: (path: string) => string) {
     handlebars.registerHelper('json', (context: any) => {
       return JSON.stringify(context);
+    });
+
+    handlebars.registerHelper('importController', (controller: any) => { // FIXME liberal any usage, should be the same type as at line 101-126
+      const imports: { [file: string]: string[] } = {};
+
+      function addType(type: any) {
+        if (type.origin) {
+          let key;
+          if ('refName' in type) {
+            key = 'refName';
+          } else if ('ref' in type) {
+            key = 'ref';
+          } else {
+            throw new TypeError();
+          }
+
+          const file = type.origin;
+          const typeName = (type as Tsoa.ReferenceType)[key];
+
+          if (!imports[file]) {
+            imports[file] = [];
+          }
+          imports[file].push(typeName);
+        }
+      }
+
+      for (const action of controller.actions) {
+        addType(action.type);
+
+        Object.keys(action.parameters).forEach(parameterName => {
+          addType(action.parameters[parameterName]);
+        });
+      }
+
+      return Object.keys(imports).map(file => {
+        const types = imports[file].map(n => { // all types imported from this file (only the leftmost identifier)
+          const dotIndex = n.indexOf('.');
+          return n.substring(0, dotIndex >= 0 ? dotIndex : undefined);
+        });
+
+        return `import { ${types.join(', ')} } from '${this.getRelativeImportPath(file)}'`;
+      }).join('\n');
     });
 
     const routesTemplate = handlebars.compile(middlewareTemplate, { noEscape: true });
@@ -81,6 +123,7 @@ export class RouteGenerator {
               parameters: parameterObjs,
               path: normalisedMethodPath,
               security: method.security,
+              type: method.type,
             };
           }),
           modulePath: this.getRelativeImportPath(controller.location),
@@ -109,21 +152,25 @@ export class RouteGenerator {
           properties[property.name] = this.buildPropertySchema(property);
         });
       }
-      const modelSchema = {
+
+      models[name] = {
+        additionalProperties: referenceType.additionalProperties ? this.buildProperty(referenceType.additionalProperties) : undefined,
         enums: referenceType.enums,
+        origin: referenceType.origin,
         properties: Object.keys(properties).length === 0 ? undefined : properties,
-      } as TsoaRoute.ModelSchema;
-      if (referenceType.additionalProperties) {
-        modelSchema.additionalProperties = this.buildProperty(referenceType.additionalProperties);
-      }
-      models[name] = modelSchema;
+      };
     });
     return models;
   }
 
   private getRelativeImportPath(fileLocation: string) {
-    fileLocation = fileLocation.replace('.ts', '');
-    return `./${path.relative(this.options.routesDir, fileLocation).replace(/\\/g, '/')}`;
+    const outputDirectory =
+      path.extname(this.options.routesDir) === '' ? // routes dir is a directory
+      this.options.routesDir :
+      path.dirname(this.options.routesDir); // routes dir is a file, get parent
+
+    fileLocation = fileLocation.replace('.ts', ''); // no ts extension in import
+    return `./${path.relative(outputDirectory, fileLocation).replace(/\\/g, '/')}`;
   }
 
   private buildPropertySchema(source: Tsoa.Property): TsoaRoute.PropertySchema {
@@ -144,7 +191,7 @@ export class RouteGenerator {
       in: source.in,
       name: source.name,
       required: source.required ? true : undefined,
-    } as TsoaRoute.ParameterSchema;
+    };
     const parameterSchema = Object.assign(parameter, property);
 
     if (Object.keys(source.validators).length > 0) {
@@ -156,28 +203,28 @@ export class RouteGenerator {
 
   private buildProperty(type: Tsoa.Type): TsoaRoute.PropertySchema {
     const schema: TsoaRoute.PropertySchema = {
-      dataType: type.dataType as any,
+      dataType: type.dataType as any, // FIXME type mismatch, refEnum doesn't exist on PropertySchema.dataType
     };
 
-    const referenceType = type as Tsoa.ReferenceType;
-    if (referenceType.refName) {
+    if ('refName' in type as any) {
       schema.dataType = undefined;
-      schema.ref = referenceType.refName;
+      schema.ref = (type as Tsoa.ReferenceType).refName;
+      schema.origin = type.origin;
     }
 
     if (type.dataType === 'array') {
       const arrayType = type as Tsoa.ArrayType;
 
-      const arrayRefType = arrayType.elementType as Tsoa.ReferenceType;
-      if (arrayRefType.refName) {
+      if ('refName' in arrayType.elementType as any) {
         schema.array = {
-          ref: arrayRefType.refName,
+          origin: arrayType.elementType.origin,
+          ref: (arrayType.elementType as Tsoa.ReferenceType).refName,
         };
       } else {
         schema.array = {
-          dataType: arrayType.elementType.dataType,
+          dataType: arrayType.elementType.dataType as any, // FIXME type mismatch
           enums: (arrayType.elementType as Tsoa.EnumerateType).enums,
-        } as TsoaRoute.PropertySchema;
+        };
       }
     }
 
