@@ -78,6 +78,53 @@ export class RouteGenerator {
     };
     handlebars.registerHelper('additionalPropsHelper', additionalPropsHelper);
 
+    handlebars.registerHelper('importController', (controller: any) => { // FIXME liberal any usage, should be the same type as at line 101-126
+      const imports: { [file: string]: string[] } = {};
+
+      function addType(type: Tsoa.Type) { // CHECK correct type? parallel typings somewhere?
+        if (type.dataType === 'array') { // FUTURE tuple handling?
+          addType((type as Tsoa.ArrayType).elementType);
+        } else if ('origin' in type) {
+          let key;
+          if ('refName' in type) {
+            key = 'refName';
+          } else if ('ref' in type) { // XXX where did this come from again?
+            key = 'ref';
+          } else {
+            throw new TypeError(`Could not find reference for ${type.dataType}`);
+          }
+
+          const file = (type as Tsoa.ReferenceType).origin!;
+          const typeName = (type as Tsoa.ReferenceType)[key];
+
+          if (!imports[file]) {
+            imports[file] = [];
+          }
+
+          if (imports[file].indexOf(typeName) < 0) {
+            imports[file].push(typeName);
+          }
+        }
+      }
+
+      for (const action of controller.actions) {
+        addType(action.type);
+
+        Object.keys(action.parameters).forEach(parameterName => {
+          addType(action.parameters[parameterName]);
+        });
+      }
+
+      return Object.keys(imports).map(file => {
+        const types = imports[file].map(n => { // all types imported from this file (only the leftmost identifier)
+          const dotIndex = n.indexOf('.');
+          return n.substring(0, dotIndex >= 0 ? dotIndex : undefined);
+        });
+
+        return `import { ${types.join(', ')} } from '${this.getRelativeImportPath(file)}'`;
+      }).join('\n');
+    });
+
     const routesTemplate = handlebars.compile(middlewareTemplate, { noEscape: true });
     const authenticationModule = this.options.authenticationModule ? this.getRelativeImportPath(this.options.authenticationModule) : undefined;
     const iocModule = this.options.iocModule ? this.getRelativeImportPath(this.options.iocModule) : undefined;
