@@ -41,12 +41,46 @@ export class RouteGenerator {
       return JSON.stringify(context);
     });
 
-    handlebars.registerHelper('importPath', (context: string) => {
-      return this.getRelativeImportPath(context);
-    });
+    handlebars.registerHelper('importController', (controller: any) => { // FIXME liberal any usage, should be the same type as at line 101-126
+      const imports: { [file: string]: string[] } = {};
 
-    handlebars.registerHelper('leftmost', (context: string) => {
-      return context.substring(0, context.indexOf('.'));
+      function addType(type: any) {
+        if (type.origin) {
+          let key;
+          if ('refName' in type) {
+            key = 'refName';
+          } else if ('ref' in type) {
+            key = 'ref';
+          } else {
+            throw new TypeError();
+          }
+
+          const file = type.origin;
+          const typeName = (type as Tsoa.ReferenceType)[key];
+
+          if (!imports[file]) {
+            imports[file] = [];
+          }
+          imports[file].push(typeName);
+        }
+      }
+
+      for (const action of controller.actions) {
+        addType(action.type);
+
+        Object.keys(action.parameters).forEach(parameterName => {
+          addType(action.parameters[parameterName]);
+        });
+      }
+
+      return Object.keys(imports).map(file => {
+        const types = imports[file].map(n => { // all types imported from this file (only the leftmost identifier)
+          const dotIndex = n.indexOf('.');
+          return n.substring(0, dotIndex >= 0 ? dotIndex : undefined);
+        });
+
+        return `import { ${types.join(', ')} } from '${this.getRelativeImportPath(file)}'`;
+      }).join('\n');
     });
 
     const routesTemplate = handlebars.compile(middlewareTemplate, { noEscape: true });
