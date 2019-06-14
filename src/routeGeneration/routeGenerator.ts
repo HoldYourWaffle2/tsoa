@@ -44,18 +44,20 @@ export class RouteGenerator {
     handlebars.registerHelper('importController', (controller: any) => { // FIXME liberal any usage, should be the same type as at line 101-126
       const imports: { [file: string]: string[] } = {};
 
-      function addType(type: any) {
-        if (type.origin) {
+      function addType(type: Tsoa.Type) { // CHECK correct type? parallel typings somewhere?
+        if (type.dataType === 'array') { // FUTURE tuple handling?
+          addType((type as Tsoa.ArrayType).elementType);
+        } else if ('origin' in type) {
           let key;
           if ('refName' in type) {
             key = 'refName';
-          } else if ('ref' in type) {
+          } else if ('ref' in type) { // XXX where did this come from again?
             key = 'ref';
           } else {
-            throw new TypeError();
+            throw new TypeError(`Could not find reference for ${type.dataType}`);
           }
 
-          const file = type.origin;
+          const file = (type as Tsoa.ReferenceType).origin!;
           const typeName = (type as Tsoa.ReferenceType)[key];
 
           if (!imports[file]) {
