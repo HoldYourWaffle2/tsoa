@@ -41,6 +41,32 @@ export class RouteGenerator {
       return JSON.stringify(context);
     });
 
+    handlebars.registerHelper('typeRef', (context: Tsoa.Type) => {
+      function getTypeName(type: Tsoa.Type): string {
+        /*
+          XXX these dataType-based determinations are not 100% safe due to the inheritance-based type structue
+          Perhaps it's more appropriate to use a discriminator-based union
+        */
+
+        if (type.dataType === 'enum' || type.dataType === 'object') { // there's no ref information for these
+          throw new TypeError(`Can't construct type reference for '${type.dataType}'`);
+        } else if (type.dataType === 'array') {
+          return `${getTypeName((type as Tsoa.ArrayType).elementType)}[]`;
+        } else if (type.dataType === 'refObject' || type.dataType === 'refEnum') {
+          return (type as Tsoa.ReferenceType).refName;
+        } else {
+          /*
+            XXX it's not possible to do this safely unless we use a very long or-conditional
+            Perhaps a separate 'primitive' dataType would be appropriate?
+          */
+
+          return type.dataType; // probably a primitive, the name will be enough
+        }
+      }
+
+      return getTypeName(context);
+    });
+
     const routesTemplate = handlebars.compile(middlewareTemplate, { noEscape: true });
     const authenticationModule = this.options.authenticationModule ? this.getRelativeImportPath(this.options.authenticationModule) : undefined;
     const iocModule = this.options.iocModule ? this.getRelativeImportPath(this.options.iocModule) : undefined;
