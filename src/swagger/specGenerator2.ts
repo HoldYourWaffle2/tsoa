@@ -196,6 +196,8 @@ export class SpecGenerator2 extends SpecGenerator {
       });
 
     if (source.in === 'body' && source.type.dataType === 'array') {
+      // FIXME how to implement tuple schema
+
       parameter.schema = {
         items: parameterType.items,
         type: 'array',

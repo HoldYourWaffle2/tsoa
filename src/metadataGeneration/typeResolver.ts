@@ -44,7 +44,7 @@ export class TypeResolver {
 
     if (this.typeNode.kind === ts.SyntaxKind.UnionType) {
       const unionType = this.typeNode as ts.UnionTypeNode;
-      const supportType = unionType.types.some((type) => type.kind === ts.SyntaxKind.LiteralType);
+      const supportType = unionType.types.some((type) => type.kind === ts.SyntaxKind.LiteralType); // XXX shouldn't this be 'all'
       if (supportType) {
         return {
           dataType: 'enum',
@@ -58,16 +58,23 @@ export class TypeResolver {
           }),
         } as Tsoa.EnumerateType;
       } else {
-        return { dataType: 'object' } as Tsoa.Type;
+        return { dataType: 'object' };
       }
     }
 
     if (this.typeNode.kind === ts.SyntaxKind.AnyKeyword) {
-      return { dataType: 'any' } as Tsoa.Type;
+      return { dataType: 'any' };
     }
 
     if (this.typeNode.kind === ts.SyntaxKind.TypeLiteral) {
-      return { dataType: 'any' } as Tsoa.Type;
+      return { dataType: 'any' };
+    }
+
+    if (this.typeNode.kind === ts.SyntaxKind.TupleType) {
+      return {
+        dataType: 'tuple',
+        elementTypes: (this.typeNode as ts.TupleTypeNode).elementTypes.map(type => new TypeResolver(type, this.current).resolve()),
+      } as Tsoa.TupleType;
     }
 
     if (this.typeNode.kind !== ts.SyntaxKind.TypeReference) {
@@ -81,7 +88,7 @@ export class TypeResolver {
       }
 
       if (typeReference.typeName.text === 'Buffer') {
-        return { dataType: 'buffer' } as Tsoa.Type;
+        return { dataType: 'buffer' };
       }
 
       if (typeReference.typeName.text === 'Array' && typeReference.typeArguments && typeReference.typeArguments.length === 1) {
@@ -96,7 +103,7 @@ export class TypeResolver {
       }
 
       if (typeReference.typeName.text === 'String') {
-        return { dataType: 'string' } as Tsoa.Type;
+        return { dataType: 'string' };
       }
     }
 

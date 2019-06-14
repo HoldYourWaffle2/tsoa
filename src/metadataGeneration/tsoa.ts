@@ -43,6 +43,11 @@ export namespace Tsoa {
     collectionFormat?: 'csv' | 'multi'| 'pipes' | 'ssv' | 'tsv' ;
   }
 
+  export interface TupleParameter extends Parameter {
+    type: TupleType;
+    collectionFormat?: 'csv' | 'multi'| 'pipes' | 'ssv' | 'tsv' ;
+  }
+
   export interface Validators {
     [key: string]: { value?: any, errorMsg?: string };
   }
@@ -69,7 +74,7 @@ export namespace Tsoa {
   }
 
   export interface Type {
-    dataType: 'string' | 'double' | 'float' | 'integer' | 'long' | 'enum' | 'array' | 'datetime' | 'date' | 'buffer' | 'void' | 'object' | 'any' | 'refEnum' | 'refObject';
+    dataType: 'string' | 'double' | 'float' | 'integer' | 'long' | 'enum' | 'array' | 'tuple' | 'datetime' | 'date' | 'buffer' | 'void' | 'object' | 'any' | 'refEnum' | 'refObject';
   }
 
   export interface EnumerateType extends Type {
@@ -80,6 +85,11 @@ export namespace Tsoa {
   export interface ArrayType extends Type {
     dataType: 'array';
     elementType: Type;
+  }
+
+  export interface TupleType extends Type {
+    dataType: 'tuple';
+    elementTypes: Type[];
   }
 
   export interface ReferenceType extends Type {

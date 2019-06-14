@@ -156,7 +156,7 @@ export class RouteGenerator {
 
   private buildProperty(type: Tsoa.Type): TsoaRoute.PropertySchema {
     const schema: TsoaRoute.PropertySchema = {
-      dataType: type.dataType as any,
+      dataType: type.dataType as any, // FIXME 'refEnum' | 'refObject' is missing in PropertySchema's dataType union
     };
 
     const referenceType = type as Tsoa.ReferenceType;
@@ -180,6 +180,8 @@ export class RouteGenerator {
         } as TsoaRoute.PropertySchema;
       }
     }
+
+    // FIXME how to implement a tuple schema?
 
     if (type.dataType === 'enum') {
       schema.enums = (type as Tsoa.EnumerateType).enums;
