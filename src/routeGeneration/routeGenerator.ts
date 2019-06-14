@@ -44,18 +44,20 @@ export class RouteGenerator {
     handlebars.registerHelper('importController', (controller: any) => { // FIXME liberal any usage, should be the same type as at line 101-126
       const imports: { [file: string]: string[] } = {};
 
-      function addType(type: any) {
-        if (type.origin) {
+      function addType(type: Tsoa.Type) { // CHECK correct type? parallel typings somewhere?
+        if (type.dataType === 'array') { // FUTURE tuple handling?
+          addType((type as Tsoa.ArrayType).elementType);
+        } else if ('origin' in type) {
           let key;
           if ('refName' in type) {
             key = 'refName';
-          } else if ('ref' in type) {
+          } else if ('ref' in type) { // XXX where did this come from again?
             key = 'ref';
           } else {
-            throw new TypeError();
+            throw new TypeError(`Could not find reference for ${type.dataType}`);
           }
 
-          const file = type.origin;
+          const file = (type as Tsoa.ReferenceType).origin!;
           const typeName = (type as Tsoa.ReferenceType)[key];
 
           if (!imports[file]) {
@@ -84,6 +86,32 @@ export class RouteGenerator {
 
         return `import { ${types.join(', ')} } from '${this.getRelativeImportPath(file)}'`;
       }).join('\n');
+    });
+
+    handlebars.registerHelper('typeRef', (context: Tsoa.Type) => {
+      function getTypeName(type: Tsoa.Type): string {
+        /*
+          XXX these dataType-based determinations are not 100% safe due to the inheritance-based type structue
+          Perhaps it's more appropriate to use a discriminator-based union
+        */
+
+        if (type.dataType === 'enum' || type.dataType === 'object') { // there's no ref information for these
+          throw new TypeError(`Can't construct type reference for '${type.dataType}'`);
+        } else if (type.dataType === 'array') {
+          return `${getTypeName((type as Tsoa.ArrayType).elementType)}[]`;
+        } else if (type.dataType === 'refObject' || type.dataType === 'refEnum') {
+          return (type as Tsoa.ReferenceType).refName;
+        } else {
+          /*
+            XXX it's not possible to do this safely unless we use a very long or-conditional
+            Perhaps a separate 'primitive' dataType would be appropriate?
+          */
+
+          return type.dataType; // probably a primitive, the name will be enough
+        }
+      }
+
+      return getTypeName(context);
     });
 
     const routesTemplate = handlebars.compile(middlewareTemplate, { noEscape: true });
