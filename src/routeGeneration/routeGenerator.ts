@@ -61,7 +61,10 @@ export class RouteGenerator {
           if (!imports[file]) {
             imports[file] = [];
           }
-          imports[file].push(typeName);
+
+          if (imports[file].indexOf(typeName) < 0) {
+            imports[file].push(typeName);
+          }
         }
       }
 
@@ -203,7 +206,7 @@ export class RouteGenerator {
 
   private buildProperty(type: Tsoa.Type): TsoaRoute.PropertySchema {
     const schema: TsoaRoute.PropertySchema = {
-      dataType: type.dataType as any, // FIXME type mismatch, refEnum doesn't exist on PropertySchema.dataType
+      dataType: type.dataType as any, // FIXME 'refEnum' | 'refObject' is missing in PropertySchema's dataType union
     };
 
     if ('refName' in type as any) {
@@ -227,6 +230,8 @@ export class RouteGenerator {
         };
       }
     }
+
+    // FIXME how to implement a tuple schema?
 
     if (type.dataType === 'enum') {
       schema.enums = (type as Tsoa.EnumerateType).enums;

@@ -49,6 +49,8 @@ export class SpecGenerator {
       return this.getSwaggerTypeForEnumType(type as Tsoa.EnumerateType);
     }
 
+    // FIXME how to implement tuple schema
+
     return this.getSwaggerTypeForReferenceType(type as Tsoa.ReferenceType) as Swagger.Schema;
   }
 

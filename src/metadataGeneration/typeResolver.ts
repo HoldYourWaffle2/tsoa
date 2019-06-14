@@ -44,7 +44,7 @@ export class TypeResolver {
 
     if (this.typeNode.kind === ts.SyntaxKind.UnionType) {
       const unionType = this.typeNode as ts.UnionTypeNode;
-      const supportType = unionType.types.some((type) => type.kind === ts.SyntaxKind.LiteralType);
+      const supportType = unionType.types.some((type) => type.kind === ts.SyntaxKind.LiteralType); // XXX shouldn't this be 'all'
       if (supportType) {
         return {
           dataType: 'enum',
@@ -71,6 +71,13 @@ export class TypeResolver {
 
     if (this.typeNode.kind === ts.SyntaxKind.TypeLiteral) {
       return { dataType: 'any' }; // CHECK type literal => any?
+    }
+
+    if (this.typeNode.kind === ts.SyntaxKind.TupleType) {
+      return {
+        dataType: 'tuple',
+        elementTypes: (this.typeNode as ts.TupleTypeNode).elementTypes.map(type => new TypeResolver(type, this.current).resolve()),
+      } as Tsoa.TupleType;
     }
 
     if (this.typeNode.kind !== ts.SyntaxKind.TypeReference) {
