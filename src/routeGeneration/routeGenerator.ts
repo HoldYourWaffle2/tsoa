@@ -61,7 +61,10 @@ export class RouteGenerator {
           if (!imports[file]) {
             imports[file] = [];
           }
-          imports[file].push(typeName);
+
+          if (imports[file].indexOf(typeName) < 0) {
+            imports[file].push(typeName);
+          }
         }
       }
 
