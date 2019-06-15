@@ -60,15 +60,15 @@ export class MethodGenerator {
   }
 
   private buildParameters() {
-    const parameters = this.node.parameters.map((p) => {
+    const parameters: Tsoa.Parameter[] = this.node.parameters.reduce((parameters, declaration) => {
       try {
-        return new ParameterGenerator(p, this.method, this.path, this.current).Generate();
+        return parameters.concat(new ParameterGenerator(declaration, this.method, this.path, this.current).Generate());
       } catch (e) {
         const methodId = this.node.name as ts.Identifier;
         const controllerId = (this.node.parent as ts.ClassDeclaration).name as ts.Identifier;
         throw new GenerateMetadataError(`${e.message} \n in '${controllerId.text}.${methodId.text}'`);
       }
-    });
+    }, [] as Tsoa.Parameter[]); // CHECK why is this type assertion necessary?
 
     const bodyParameters = parameters.filter((p) => p.in === 'body');
     const bodyProps = parameters.filter((p) => p.in === 'body-prop');

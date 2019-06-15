@@ -15,24 +15,24 @@ export class ParameterGenerator {
     private readonly current: MetadataGenerator,
   ) { }
 
-  public Generate(): Tsoa.Parameter {
+  public Generate(): Tsoa.Parameter[] {
     const decoratorName = getDecoratorName(this.parameter, (identifier) => this.supportParameterDecorator(identifier.text));
 
     switch (decoratorName) {
       case 'Request':
-        return this.getRequestParameter(this.parameter);
+        return [ this.getRequestParameter(this.parameter) ];
       case 'Body':
-        return this.getBodyParameter(this.parameter);
+        return [ this.getBodyParameter(this.parameter) ];
       case 'BodyProp':
-        return this.getBodyPropParameter(this.parameter);
+        return [ this.getBodyPropParameter(this.parameter) ];
       case 'Header':
-        return this.getHeaderParameter(this.parameter);
+        return [ this.getHeaderParameter(this.parameter) ]; // TODO expand objects for headers as well?
       case 'Query':
-        return this.getQueryParameter(this.parameter);
+        return [ this.getQueryParameter(this.parameter) ];
       case 'Path':
-        return this.getPathParameter(this.parameter);
+        return [ this.getPathParameter(this.parameter) ];
       default:
-        return this.getPathParameter(this.parameter);
+        return [ this.getPathParameter(this.parameter) ];
     }
   }
 
