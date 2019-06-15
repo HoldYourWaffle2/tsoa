@@ -99,6 +99,8 @@ export class ParameterGenerator {
       throw new GenerateMetadataError(`@Header('${parameterName}') Can't support '${type.dataType}' type.`);
     }
 
+    // TODO support AggregateParameter?
+
     return {
       default: getInitializerValue(parameter.initializer, type),
       description: this.getParameterDescription(parameter),
@@ -149,6 +151,26 @@ export class ParameterGenerator {
         collectionFormat: 'multi', // XXX what is this used for?
         type: tupleType,
       } as Tsoa.TupleParameter;
+    }
+
+    if (type.dataType === 'refObject') { // TODO support dataType === 'object'?
+      return {
+        ...commonProperties,
+        subParameters: (type as Tsoa.ReferenceType).properties!.map(property =>
+          this.getQueryParameter(
+            ts.createParameter( // map property declaration to parameter declaration
+              property.declaration.decorators,
+              property.declaration.modifiers,
+              undefined, // dotdotdot token
+              property.declaration.name.getText(),
+              property.declaration.questionToken,
+              property.declaration.type,
+              property.declaration.initializer,
+            ),
+          ),
+        ),
+        type,
+      } as Tsoa.AggregateParameter;
     }
 
     if (!this.supportPathDataType(type)) {

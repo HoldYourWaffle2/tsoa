@@ -45,7 +45,7 @@ export function RegisterRoutes(router: KoaRouter) {
             {{/if}}
             async (context, next) => {
             const args = {
-                {{#each parameters}}
+                {{#each (flattenAggregates parameters) }}
                     {{@key}}: {{{json this}}},
                 {{/each}}
             };

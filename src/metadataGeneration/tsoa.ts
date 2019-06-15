@@ -1,3 +1,5 @@
+import * as ts from 'typescript';
+
 export namespace Tsoa {
   export interface Metadata {
     controllers: Controller[];
@@ -38,6 +40,10 @@ export namespace Tsoa {
     validators: Validators;
   }
 
+  export interface AggregateParameter extends Parameter {
+    subParameters: Parameter[];
+  }
+
   export interface ArrayParameter extends Parameter {
     type: ArrayType;
     collectionFormat?: 'csv' | 'multi'| 'pipes' | 'ssv' | 'tsv' ;
@@ -71,6 +77,7 @@ export namespace Tsoa {
     type: Type;
     required: boolean;
     validators: Validators;
+    declaration: ts.PropertyDeclaration | ts.ParameterDeclaration; // properties can be defined by constructor parameters
   }
 
   export interface Type {

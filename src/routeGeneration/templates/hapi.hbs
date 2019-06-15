@@ -53,7 +53,7 @@ export function RegisterRoutes(server: any) {
                 {{/if}}
                 handler: (request: any, h: any) => {
                     const args = {
-                        {{#each parameters}}
+                        {{#each (flattenAggregates parameters) }}
                             {{@key}}: {{{json this}}},
                         {{/each}}
                     };

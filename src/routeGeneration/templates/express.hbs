@@ -45,7 +45,7 @@ export function RegisterRoutes(app: express.Express) {
             {{/if}}
             function (request: any, response: any, next: any) {
             const args = {
-                {{#each parameters}}
+                {{#each (flattenAggregates parameters) }}
                     {{@key}}: {{{json this}}},
                 {{/each}}
             };
