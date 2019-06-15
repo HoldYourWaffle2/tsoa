@@ -41,6 +41,27 @@ export class RouteGenerator {
       return JSON.stringify(context);
     });
 
+    handlebars.registerHelper('flattenAggregates', (context: { [name: string]: TsoaRoute.ParameterSchema }) => {
+      const parameters: { [name: string]: TsoaRoute.ParameterSchema } = {};
+
+      Object.keys(context).forEach(name => {
+        if (parameters[name]) {
+          throw new ReferenceError(`Duplicate parameter name '${name}'`);
+        }
+
+        const subParameters = (context[name] as TsoaRoute.AggregateParameterSchema).subParameters;
+        if (subParameters) {
+          subParameters.forEach(parameter => {
+            parameters[parameter.name] = parameter;
+          });
+        } else {
+          parameters[name] = context[name];
+        }
+      });
+
+      return parameters;
+    });
+
     const routesTemplate = handlebars.compile(middlewareTemplate, { noEscape: true });
     const authenticationModule = this.options.authenticationModule ? this.getRelativeImportPath(this.options.authenticationModule) : undefined;
     const iocModule = this.options.iocModule ? this.getRelativeImportPath(this.options.iocModule) : undefined;
@@ -137,24 +158,29 @@ export class RouteGenerator {
     return propertySchema;
   }
 
-  private buildParameterSchema(source: Tsoa.Parameter): TsoaRoute.ParameterSchema {
-    const property = this.buildProperty(source.type);
-    const parameter = {
+  private buildParameterSchema(source: Tsoa.Parameter): TsoaRoute.ParameterSchema & TsoaRoute.PropertySchema {
+    const propertySchema = this.buildProperty(source.type);
+    const parameterSchema = {
       default: source.default,
       in: source.in,
       name: source.name,
       required: source.required ? true : undefined,
     } as TsoaRoute.ParameterSchema;
-    const parameterSchema = Object.assign(parameter, property);
 
-    if (Object.keys(source.validators).length > 0) {
-      parameterSchema.validators = source.validators;
+    const schema = Object.assign(parameterSchema, propertySchema);
+
+    if ((source as Tsoa.AggregateParameter).subParameters) { // add sub parameters if we're dealing with an aggregate
+      (schema as TsoaRoute.AggregateParameterSchema).subParameters = (source as Tsoa.AggregateParameter).subParameters.map(this.buildParameterSchema.bind(this));
     }
 
-    return parameterSchema;
+    if (Object.keys(source.validators).length > 0) {
+      schema.validators = source.validators;
+    }
+
+    return schema;
   }
 
-  private buildProperty(type: Tsoa.Type): TsoaRoute.PropertySchema {
+  private buildProperty(type: Tsoa.Type): TsoaRoute.PropertySchema { // XXX the type system is really bad here
     const schema: TsoaRoute.PropertySchema = {
       dataType: type.dataType as any,
     };

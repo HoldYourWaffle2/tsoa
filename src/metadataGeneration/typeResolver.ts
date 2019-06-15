@@ -275,7 +275,7 @@ export class TypeResolver {
         refName: refNameWithGenerics,
       } as Tsoa.ReferenceType;
 
-      referenceType.properties = (referenceType.properties as Tsoa.Property[]).concat(properties);
+      referenceType.properties = referenceType.properties!.concat(properties);
       localReferenceTypeCache[refNameWithGenerics] = referenceType;
 
       if (example) {
@@ -512,6 +512,7 @@ export class TypeResolver {
           }
 
           return {
+            declaration: propertyDeclaration,
             default: getJSDocComment(propertyDeclaration, 'default'),
             description: this.getNodeDescription(propertyDeclaration),
             format: this.getNodeFormat(propertyDeclaration),
@@ -551,6 +552,7 @@ export class TypeResolver {
     }
 
     // Class model
+    // XXX syntax kind is never checked?
     const classDeclaration = node as ts.ClassDeclaration;
     const properties = classDeclaration.members
       .filter(member => {
@@ -558,7 +560,7 @@ export class TypeResolver {
         return !ignore;
       })
       .filter((member) => member.kind === ts.SyntaxKind.PropertyDeclaration)
-      .filter((member) => this.hasPublicModifier(member)) as Array<ts.PropertyDeclaration | ts.ParameterDeclaration>;
+      .filter((member) => this.hasPublicModifier(member)) as Array<ts.PropertyDeclaration | ts.ParameterDeclaration>; // properties can be defined by constructor parameters
 
     const classConstructor = classDeclaration
       .members
@@ -588,6 +590,7 @@ export class TypeResolver {
         const type = new TypeResolver(typeNode, this.current, property).resolve();
 
         return {
+          declaration: property,
           default: getInitializerValue(property.initializer, type),
           description: this.getNodeDescription(property),
           format: this.getNodeFormat(property),
@@ -638,7 +641,7 @@ export class TypeResolver {
         const baseEntityName = t.expression as ts.EntityName;
         const referenceType = this.getReferenceType(baseEntityName);
         if (referenceType.properties) {
-          referenceType.properties.forEach((property) => properties.push(property));
+          properties.push(...referenceType.properties);
         }
       });
     });
