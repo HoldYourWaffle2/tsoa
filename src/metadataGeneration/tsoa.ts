@@ -40,6 +40,10 @@ export namespace Tsoa {
     validators: Validators;
   }
 
+  export interface AggregateParameter extends Parameter {
+    subParameters: Parameter[];
+  }
+
   export interface ArrayParameter extends Parameter {
     type: ArrayType;
     collectionFormat?: 'csv' | 'multi'| 'pipes' | 'ssv' | 'tsv' ;
