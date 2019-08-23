@@ -191,7 +191,7 @@ export class SpecGenerator2 extends SpecGenerator {
     return parameter;
   }
 
-  private buildParameter(source: Tsoa.Parameter): Swagger.Parameter {
+  private buildParameter(source: Tsoa.Parameter): Swagger.Parameter { // FIXME expand AggregateParameters
     let parameter = {
       default: source.default,
       description: source.description,

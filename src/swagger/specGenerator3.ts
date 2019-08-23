@@ -233,7 +233,7 @@ export class SpecGenerator3 extends SpecGenerator {
     } as Swagger.RequestBody;
   }
 
-  private buildParameter(source: Tsoa.Parameter): Swagger.Parameter {
+  private buildParameter(source: Tsoa.Parameter): Swagger.Parameter { // FIXME expand AggregateParameters
     const parameter = {
       description: source.description,
       in: source.in,
