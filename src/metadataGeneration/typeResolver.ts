@@ -578,6 +578,7 @@ export class TypeResolver {
           }
 
           return {
+            declaration: propertyDeclaration,
             default: getJSDocComment(propertyDeclaration, 'default'),
             description: this.getNodeDescription(propertyDeclaration),
             format: this.getNodeFormat(propertyDeclaration),
@@ -655,6 +656,7 @@ export class TypeResolver {
         const type = new TypeResolver(typeNode, this.current, property).resolve();
 
         return {
+          declaration: property,
           default: getInitializerValue(property.initializer, type),
           description: this.getNodeDescription(property),
           format: this.getNodeFormat(property),

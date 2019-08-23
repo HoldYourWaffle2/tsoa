@@ -1,3 +1,5 @@
+import * as ts from 'typescript';
+
 export namespace Tsoa {
   export interface Metadata {
     controllers: Controller[];
@@ -66,6 +68,7 @@ export namespace Tsoa {
     type: Type;
     required: boolean;
     validators: Validators;
+    declaration: ts.PropertyDeclaration | ts.ParameterDeclaration; // properties can be defined by constructor parameters
   }
 
   export type TypeStringLiteral = 'string' | 'boolean' | 'double' | 'float' | 'integer' | 'long' | 'enum' | 'array' | 'datetime' | 'date' | 'binary' | 'buffer' | 'byte' | 'void' | 'object' | 'any' | 'refEnum' | 'refObject' | 'union' | 'intersection';
