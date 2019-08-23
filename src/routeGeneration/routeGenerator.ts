@@ -69,6 +69,28 @@ export class RouteGenerator {
       }
     });
 
+    // CHECK what is the context here?
+    // XXX do you ever want the non-flattened data in templates?
+    handlebars.registerHelper('flattenAggregates', (unflattened: { [name: string]: TsoaRoute.ParameterSchema }) => { // XXX what does 'name' mean here? parameter name? (probably based on the error)
+      const flattened: { [name: string]: TsoaRoute.ParameterSchema } = {};
+
+      Object.entries(unflattened).forEach(([name, schema]) => {
+        if (flattened[name]) {
+          // XXX what does this implicate? can't have objects with the same property names? qualifiers?
+          // (I think it means that we can't have a parameter 'x' combined with an object with property 'x')
+          throw new ReferenceError(`Duplicate parameter name '${name}'`);
+        }
+
+        if (this.isAggregateParameterSchema(schema)) {
+          schema.subParameters.forEach(subSchema => flattened[subSchema.name] = subSchema); // XXX shouldn't there be a duplicate check here too?
+        } else {
+          flattened[name] = schema;
+        }
+      });
+
+      return flattened;
+    });
+
     const routesTemplate = handlebars.compile(middlewareTemplate, { noEscape: true });
     const authenticationModule = this.options.authenticationModule ? this.getRelativeImportPath(this.options.authenticationModule) : undefined;
     const iocModule = this.options.iocModule ? this.getRelativeImportPath(this.options.iocModule) : undefined;
@@ -227,5 +249,15 @@ export class RouteGenerator {
     }
 
     return schema;
+  }
+
+  // XXX this feels redundant, can it be generified? (initial effort combining a union with conditional types did not work)
+
+  private isAggregateParameter(parameter: Tsoa.Parameter): parameter is Tsoa.AggregateParameter {
+    return (parameter as Tsoa.AggregateParameter).subParameters !== undefined;
+  }
+
+  private isAggregateParameterSchema(parameter: TsoaRoute.ParameterSchema): parameter is TsoaRoute.AggregateParameterSchema {
+    return (parameter as TsoaRoute.AggregateParameterSchema).subParameters !== undefined;
   }
 }
