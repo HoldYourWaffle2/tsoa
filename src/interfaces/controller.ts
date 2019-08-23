@@ -1,4 +1,4 @@
-export class Controller {
+export abstract class Controller {
   private statusCode?: number = undefined;
   private headers = {} as { [name: string]: string | undefined };
 
