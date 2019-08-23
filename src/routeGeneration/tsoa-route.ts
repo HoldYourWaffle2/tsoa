@@ -37,6 +37,10 @@ export namespace TsoaRoute {
         in: string;
     }
 
+    export interface AggregateParameterSchema extends ParameterSchema {
+        subParameters: ParameterSchema[];
+    }
+
     export interface Security {
       [key: string]: string[];
     }

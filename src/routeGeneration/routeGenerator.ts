@@ -171,21 +171,24 @@ export class RouteGenerator {
     return propertySchema;
   }
 
-  private buildParameterSchema(source: Tsoa.Parameter): TsoaRoute.ParameterSchema {
-    const property = this.buildProperty(source.type);
-    const parameter = {
+  private buildParameterSchema(source: Tsoa.Parameter): TsoaRoute.ParameterSchema | TsoaRoute.AggregateParameterSchema {
+    const schema: TsoaRoute.ParameterSchema = {
+      ...this.buildProperty(source.type),
       default: source.default,
       in: source.in,
       name: source.name,
       required: source.required ? true : undefined,
-    } as TsoaRoute.ParameterSchema;
-    const parameterSchema = Object.assign(parameter, property);
+    };
 
-    if (Object.keys(source.validators).length > 0) {
-      parameterSchema.validators = source.validators;
+    if (this.isAggregateParameter(source)) { // add sub parameters if we're dealing with an aggregate
+      (schema as TsoaRoute.AggregateParameterSchema).subParameters = source.subParameters.map(this.buildParameterSchema.bind(this)); // CHECK this bind necessary?
     }
 
-    return parameterSchema;
+    if (Object.keys(source.validators).length > 0) { // XXX why the keyset length check?
+      schema.validators = source.validators;
+    }
+
+    return schema;
   }
 
   private buildProperty(type: Tsoa.Type): TsoaRoute.PropertySchema { // XXX the type system makes no sense here (PropertySchema for Type?!)
