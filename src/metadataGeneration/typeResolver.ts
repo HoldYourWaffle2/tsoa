@@ -59,7 +59,7 @@ export class TypeResolver {
               case ts.SyntaxKind.FalseKeyword:
                 return 'false';
               default:
-                return String((type.literal as ts.LiteralExpression).text);
+                return (type.literal as ts.LiteralExpression).text; // XXX what about ts.PrefixUnaryExpression?
             }
           }),
         };
@@ -248,10 +248,9 @@ export class TypeResolver {
       return;
     }
 
+    const enums = enumDeclaration.members.map((member, index) => getEnumValue(member) || index.toString());
     if (extractEnum) {
-      const enums = enumDeclaration.members.map((member: any, index) => {
-        return getEnumValue(member) || String(index);
-      });
+      // XXX extracting means keeping the reference?
       return {
         dataType: 'refEnum',
         description: this.getNodeDescription(enumDeclaration),
@@ -261,9 +260,7 @@ export class TypeResolver {
     } else {
       return {
         dataType: 'enum',
-        enums: enumDeclaration.members.map((member: any, index) => {
-          return getEnumValue(member) || String(index);
-        }),
+        enums,
       };
     }
   }
@@ -340,7 +337,7 @@ export class TypeResolver {
       return referenceType;
     } catch (err) {
       // tslint:disable-next-line:no-console
-      console.error(`There was a problem resolving type of '${this.getTypeName(typeName, genericTypes)}'.`);
+      console.error(`There was a problem resolving type of '${refNameWithGenerics}'.`);
       throw err;
     }
   }
@@ -536,10 +533,9 @@ export class TypeResolver {
   }
 
   private getModelProperties(node: UsableDeclaration, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.Property[] {
-    const isIgnored = (e: ts.TypeElement | ts.ClassElement) => {
-      const ignore = isExistJSDocTag(e, tag => tag.tagName.text === 'ignore');
-      return ignore;
-    };
+    function isIgnored(e: ts.TypeElement | ts.ClassElement) {
+      return isExistJSDocTag(e, tag => tag.tagName.text === 'ignore');
+    }
 
     if (ts.isInterfaceDeclaration(node)) {
       // Interface model
