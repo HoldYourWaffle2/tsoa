@@ -17,7 +17,7 @@ syntaxKindMap[ts.SyntaxKind.VoidKeyword] = 'void';
 const localReferenceTypeCache: { [typeName: string]: Tsoa.ReferenceType } = {};
 const inProgressTypes: { [typeName: string]: boolean } = {};
 
-type UsableDeclaration = ts.InterfaceDeclaration | ts.ClassDeclaration | ts.TypeAliasDeclaration;
+type UsableDeclaration = ts.InterfaceDeclaration | ts.ClassDeclaration | ts.TypeAliasDeclaration | ts.EnumDeclaration;
 
 export class TypeResolver {
   constructor(private readonly typeNode: ts.TypeNode, private readonly current: MetadataGenerator, private readonly parentNode?: ts.Node, private readonly extractEnum = true) { }
@@ -142,10 +142,10 @@ export class TypeResolver {
 
     let referenceType: Tsoa.ReferenceType;
     if (typeReference.typeArguments && typeReference.typeArguments.length === 1) {
-      const typeT: ts.NodeArray<ts.TypeNode> = typeReference.typeArguments as ts.NodeArray<ts.TypeNode>;
-      referenceType = this.getReferenceType(typeReference.typeName as ts.EntityName, this.extractEnum, typeT);
+      // XXX what if we have >1 type argument?
+      referenceType = this.getReferenceType(typeReference.typeName, this.extractEnum, typeReference.typeArguments);
     } else {
-      referenceType = this.getReferenceType(typeReference.typeName as ts.EntityName, this.extractEnum);
+      referenceType = this.getReferenceType(typeReference.typeName, this.extractEnum);
     }
 
     this.current.AddReferenceType(referenceType);
@@ -224,7 +224,7 @@ export class TypeResolver {
   }
 
   private getEnumerateType(typeName: ts.EntityName, extractEnum = true): Tsoa.EnumerateType | Tsoa.ReferenceType | undefined {
-    const enumName = (typeName as ts.Identifier).text;
+    const enumName = this.getEntityNameSimpleText(typeName);
     const enumNodes = this.current.nodes.filter(node => node.kind === ts.SyntaxKind.EnumDeclaration).filter(node => (node as any).name.text === enumName);
 
     if (!enumNodes.length) {
@@ -234,15 +234,15 @@ export class TypeResolver {
       throw new GenerateMetadataError(`Multiple matching enum found for enum ${enumName}; please make enum names unique.`);
     }
 
-    const enumDeclaration = enumNodes[0] as ts.EnumDeclaration;
+    const enumDeclaration = enumNodes[0];
 
-    function getEnumValue(member: any) {
-      const initializer = member.initializer;
-      if (initializer) {
-        if (initializer.expression) {
-          return initializer.expression.text;
+    function getEnumValue(member: ts.EnumMember) {
+      if (member.initializer) {
+        if ((member.initializer as any).expression) {
+          // This applies to initializations with sub-expressions such as an AsExpression
+          return (member.initializer as any).expression.text;
         }
-        return initializer.text;
+        return member.initializer.getText(); // XXX does this work?
       }
       return;
     }
@@ -267,8 +267,8 @@ export class TypeResolver {
     }
   }
 
-  private getLiteralType(typeName: ts.EntityName): Tsoa.Type | undefined {
-    const literalName = (typeName as ts.Identifier).text;
+  private getLiteralType(typeName: ts.EntityName): Tsoa.Type | Tsoa.EnumerateType | undefined {
+    const literalName = this.getEntityNameSimpleText(typeName);
     const literalTypes = this.current.nodes
       .filter(ts.isTypeAliasDeclaration)
       .filter(node => ts.isUnionTypeNode(node.type) && node.type.types)
@@ -297,7 +297,7 @@ export class TypeResolver {
   }
 
   private getReferenceType(type: ts.EntityName, extractEnum = true, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.ReferenceType {
-    const typeName = this.resolveFqTypeName(type);
+    const typeName = this.getEntityNameFullText(type);
     const refNameWithGenerics = this.getTypeName(typeName, genericTypes);
 
     try {
@@ -306,7 +306,7 @@ export class TypeResolver {
         return existingType;
       }
 
-      const referenceEnumType = this.getEnumerateType(type, true) as Tsoa.ReferenceType;
+      const referenceEnumType = this.getEnumerateType(type, true) as Tsoa.ReferenceType | undefined; // we know it's a Tsoa.ReferenceType because extractEnum = true
       if (referenceEnumType) {
         localReferenceTypeCache[refNameWithGenerics] = referenceEnumType;
         return referenceEnumType;
@@ -344,13 +344,16 @@ export class TypeResolver {
     }
   }
 
-  private resolveFqTypeName(type: ts.EntityName): string {
-    if (type.kind === ts.SyntaxKind.Identifier) {
-      return (type as ts.Identifier).text;
-    }
+  private getEntityNameSimpleText(node: ts.EntityName): string {
+    return ts.isIdentifier(node) ? node.text : node.right.text;
+  }
 
-    const qualifiedType = type as ts.QualifiedName;
-    return this.resolveFqTypeName(qualifiedType.left) + '.' + (qualifiedType.right as ts.Identifier).text;
+  private getEntityNameFullText(type: ts.EntityName): string {
+    if (ts.isIdentifier(type)) {
+      return type.text;
+    } else {
+      return `${this.getEntityNameFullText(type.left)}.${type.right.text}`;
+    }
   }
 
   private getTypeName(typeName: string, genericTypes?: ts.NodeArray<ts.TypeNode>): string {
@@ -396,22 +399,14 @@ export class TypeResolver {
       return node.typeName.getText(); // XXX does this work?
     }
 
-    const typeReference = typeNode as ts.TypeReferenceNode;
-    try {
-      return (typeReference.typeName as ts.Identifier).text;
-    } catch (e) {
-      // idk what would hit this? probably needs more testing
-      // tslint:disable-next-line:no-console
-      console.error(e);
-      return typeNode.toString();
-    }
+    throw new GenerateMetadataError(`Unknown type: ${ts.SyntaxKind[node.kind]}.`);
   }
 
   private createCircularDependencyResolver(refName: string): Tsoa.ReferenceType {
-    const referenceType = {
+    const referenceType: Tsoa.ReferenceType = {
       dataType: 'refObject',
       refName,
-    } as Tsoa.ReferenceType;
+    };
 
     // XXX this doesn't look safe at all
     this.current.OnFinish(referenceTypes => {
@@ -490,9 +485,7 @@ export class TypeResolver {
       if (!this.nodeIsUsable(node) || !this.current.IsExportedNode(node)) {
         return false;
       }
-
-      const modelTypeDeclaration = node as UsableDeclaration;
-      return (modelTypeDeclaration.name as ts.Identifier).text === typeName;
+      return node.name!.text === typeName; // FIXME this non-null assertion is unsafe as stated by the documentation: "May be undefined in export default class { ... }"
     }) as UsableDeclaration[];
 
     if (!modelTypes.length) {
@@ -726,8 +719,8 @@ export class TypeResolver {
     return isReadonly && !isProtectedOrPrivate;
   }
 
-  private getNodeDescription(node: UsableDeclaration | ts.PropertyDeclaration | ts.ParameterDeclaration | ts.EnumDeclaration) {
-    const symbol = this.current.typeChecker.getSymbolAtLocation(node.name as ts.Node);
+  private getNodeDescription(node: ts.NamedDeclaration) {
+    const symbol = this.current.typeChecker.getSymbolAtLocation(node.name!); // XXX is this a safe assertion?
     if (!symbol) {
       return undefined;
     }
@@ -749,11 +742,11 @@ export class TypeResolver {
     return undefined;
   }
 
-  private getNodeFormat(node: UsableDeclaration | ts.PropertyDeclaration | ts.ParameterDeclaration | ts.EnumDeclaration) {
+  private getNodeFormat(node: ts.Node) {
     return getJSDocComment(node, 'format');
   }
 
-  private getNodeExample(node: UsableDeclaration | ts.PropertyDeclaration | ts.ParameterDeclaration | ts.EnumDeclaration) {
+  private getNodeExample(node: ts.NamedDeclaration) {
     const example = getJSDocComment(node, 'example');
 
     if (example) {
