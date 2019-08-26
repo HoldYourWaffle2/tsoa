@@ -293,23 +293,19 @@ export class TypeResolver {
       inProgressTypes.push(refNameWithGenerics);
 
       const modelType = this.getModelTypeDeclaration(type);
-      const properties = this.getModelProperties(modelType, genericTypes);
-      const additionalProperties = this.getModelAdditionalProperties(modelType);
+      const ownProperties = this.getModelProperties(modelType, genericTypes);
       const inheritedProperties = this.getModelInheritedProperties(modelType) || [];
-      const example = this.getNodeExample(modelType);
 
       const referenceType: Tsoa.ReferenceType = {
-        additionalProperties,
         dataType: 'refObject',
+        additionalProperties: this.getModelAdditionalPropertiesType(modelType),
         description: this.getNodeDescription(modelType),
-        example,
-        properties: inheritedProperties,
+        example: this.getNodeExample(modelType),
+        properties: inheritedProperties.concat(ownProperties),
         refName: refNameWithGenerics,
       };
 
-      referenceType.properties = referenceType.properties!.concat(properties);
       localReferenceTypeCache[refNameWithGenerics] = referenceType;
-
       return referenceType;
     } catch (err) {
       // tslint:disable-next-line:no-console
