@@ -160,7 +160,10 @@ export class TypeResolver {
       return;
     }
 
-    if (primitiveType === 'number') {
+    if (primitiveType !== 'number') {
+      // number primitives need some extra treatment
+      return { dataType: primitiveType };
+    } else {
       if (!parentNode) {
         return { dataType: 'double' };
       }
@@ -185,7 +188,6 @@ export class TypeResolver {
           return { dataType: 'double' };
       }
     }
-    return { dataType: primitiveType } as Tsoa.Type;
   }
 
   private getDateType(parentNode?: ts.Node): Tsoa.Type {
@@ -198,14 +200,8 @@ export class TypeResolver {
 
     if (tags.length === 0) {
       return { dataType: 'datetime' };
-    }
-    switch (tags[0]) {
-      case 'isDate':
-        return { dataType: 'date' };
-      case 'isDateTime':
-        return { dataType: 'datetime' };
-      default:
-        return { dataType: 'datetime' };
+    } else {
+      return { dataType: tags[0] === 'isDate' ? 'date' : 'datetime' }; // XXX this feels wrong
     }
   }
 
@@ -215,9 +211,8 @@ export class TypeResolver {
 
     if (enumNodes.length === 0) {
       return;
-    }
-    if (enumNodes.length > 1) {
-      throw new GenerateMetadataError(`Multiple matching enum found for enum ${enumName}; please make enum names unique.`);
+    } else if (enumNodes.length > 1) {
+      throw new GenerateMetadataError(`Multiple matching enums found for '${enumName}'; please make enum names unique.`); // XXX should probably link to the (or a different) explanation page
     }
 
     const enumDeclaration = enumNodes[0];
@@ -259,8 +254,7 @@ export class TypeResolver {
 
     if (literalTypes.length === 0) {
       return;
-    }
-    if (literalTypes.length > 1) {
+    } else if (literalTypes.length > 1) {
       throw new GenerateMetadataError(`Multiple matching enum found for enum ${literalName}; please make enum names unique.`);
     }
 
@@ -344,17 +338,19 @@ export class TypeResolver {
       return typeName;
     }
 
-    const resolvedName = genericTypes.reduce(
+    const resolvedGenericNames = genericTypes.reduce(
       (acc, generic) => {
+        let refNameSection: string;
+
         if (ts.isTypeReferenceNode(generic) && generic.typeArguments && generic.typeArguments.length > 0) {
-          const typeNameSection = this.getTypeName(generic.typeName.getText(), generic.typeArguments);
-          acc.push(typeNameSection);
-          return acc;
+          // ref has generics
+          refNameSection = this.getRefName(generic.typeName.getText(), generic.typeArguments);
         } else {
-          const typeNameSection = this.getAnyTypeName(generic);
-          acc.push(typeNameSection);
-          return acc;
+          refNameSection = this.getAnyTypeName(generic);
         }
+
+        acc.push(refNameSection);
+        return acc;
       },
       [] as string[],
     )
@@ -440,9 +436,9 @@ export class TypeResolver {
 
       if (moduleDeclarations.length === 0) {
         throw new GenerateMetadataError(`No matching module declarations found for ${leftmostName}.`);
-      }
-      if (moduleDeclarations.length > 1) {
+      } else if (moduleDeclarations.length > 1) {
         throw new GenerateMetadataError(`Multiple matching module declarations found for ${leftmostName}; please make module declarations unique.`);
+      } else {
         const declaration = moduleDeclarations[0];
 
         if (declaration.body && ts.isModuleBlock(declaration.body)) {
