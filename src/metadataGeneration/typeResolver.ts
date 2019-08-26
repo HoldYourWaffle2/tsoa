@@ -168,9 +168,8 @@ export class TypeResolver {
         return { dataType: 'double' };
       }
 
-      const tags = getJSDocTagNames(parentNode).filter(name => {
-        return ['isInt', 'isLong', 'isFloat', 'isDouble'].some(m => m === name);
-      });
+      const tags = getJSDocTagNames(parentNode).filter(name => ['isInt', 'isLong', 'isFloat', 'isDouble'].includes(name));
+
       if (tags.length === 0) {
         return { dataType: 'double' };
       }
@@ -194,9 +193,8 @@ export class TypeResolver {
     if (!parentNode) {
       return { dataType: 'datetime' };
     }
-    const tags = getJSDocTagNames(parentNode).filter(name => {
-      return ['isDate', 'isDateTime'].some(m => m === name);
-    });
+
+    const tags = getJSDocTagNames(parentNode).filter(name => ['isDate', 'isDateTime'].includes(name)); // XXX we could technically ignore isDateTime since it's the default
 
     if (tags.length === 0) {
       return { dataType: 'datetime' };
@@ -207,7 +205,7 @@ export class TypeResolver {
 
   private getEnumerateType(typeName: ts.EntityName, extractEnum = true): Tsoa.EnumerateType | Tsoa.ReferenceType | undefined {
     const enumName = this.getEntityNameSimpleText(typeName);
-    const enumNodes = this.current.nodes.filter(node => node.kind === ts.SyntaxKind.EnumDeclaration).filter(node => (node as any).name.text === enumName);
+    const enumNodes = this.current.nodes.filter(ts.isEnumDeclaration).filter(node => node.name.text === enumName);
 
     if (enumNodes.length === 0) {
       return;
@@ -287,7 +285,6 @@ export class TypeResolver {
         localReferenceTypeCache[refNameWithGenerics] = referenceEnumType;
         return referenceEnumType;
       }
-
 
       if (inProgressTypes.includes(refNameWithGenerics)) {
         return this.createCircularDependencyResolver(refNameWithGenerics);
@@ -585,8 +582,7 @@ export class TypeResolver {
 
       const classConstructor = node.members.find(ts.isConstructorDeclaration) as ts.ConstructorDeclaration | undefined;
       if (classConstructor && classConstructor.parameters) {
-        const constructorProperties = classConstructor.parameters.filter(parameter => this.isAccessibleParameter(parameter));
-
+        const constructorProperties = classConstructor.parameters.filter(this.isAccessibleParameter);
         properties.push(...constructorProperties);
       }
 
@@ -698,9 +694,7 @@ export class TypeResolver {
 
     // readonly, not private readonly, not public readonly
     const isReadonly = node.modifiers.some(modifier => modifier.kind === ts.SyntaxKind.ReadonlyKeyword);
-    const isProtectedOrPrivate = node.modifiers.some(modifier => {
-      return modifier.kind === ts.SyntaxKind.ProtectedKeyword || modifier.kind === ts.SyntaxKind.PrivateKeyword;
-    });
+    const isProtectedOrPrivate = node.modifiers.some(modifier => modifier.kind === ts.SyntaxKind.ProtectedKeyword || modifier.kind === ts.SyntaxKind.PrivateKeyword);
     return isReadonly && !isProtectedOrPrivate;
   }
 
