@@ -9,11 +9,13 @@ import { getInitializerValue } from './initializer-value';
 import { MetadataGenerator } from './metadataGenerator';
 import { Tsoa } from './tsoa';
 
-const syntaxKindMap: { [kind: number]: string } = {};
-syntaxKindMap[ts.SyntaxKind.NumberKeyword] = 'number';
-syntaxKindMap[ts.SyntaxKind.StringKeyword] = 'string';
-syntaxKindMap[ts.SyntaxKind.BooleanKeyword] = 'boolean';
-syntaxKindMap[ts.SyntaxKind.VoidKeyword] = 'void';
+/** ts.SyntaxKind => name */
+const primitiveSyntaxKindMap: { [kind: number]: Tsoa.TypeStringLiteral | 'number' } = {
+  [ts.SyntaxKind.NumberKeyword]: 'number',
+  [ts.SyntaxKind.StringKeyword]: 'string',
+  [ts.SyntaxKind.BooleanKeyword]: 'boolean',
+  [ts.SyntaxKind.VoidKeyword]: 'void',
+};
 
 const localReferenceTypeCache: { [typeName: string]: Tsoa.ReferenceType } = {}; // XXX why is it called 'localReferenceTypeCache'? Aren't type resolutions done globally (causing the duplicate model name issue)?
 const inProgressTypes: string[] = [];
@@ -155,7 +157,7 @@ export class TypeResolver {
   }
 
   private getPrimitiveType(typeNode: ts.TypeNode, parentNode?: ts.Node): Tsoa.Type | undefined {
-    const primitiveType = syntaxKindMap[typeNode.kind];
+    const primitiveType = primitiveSyntaxKindMap[typeNode.kind];
     if (!primitiveType) {
       return;
     }
@@ -205,15 +207,15 @@ export class TypeResolver {
 
   private getEnumerateType(typeName: ts.EntityName, extractEnum = true): Tsoa.EnumerateType | Tsoa.ReferenceType | undefined {
     const enumName = this.getEntityNameSimpleText(typeName);
-    const enumNodes = this.current.nodes.filter(ts.isEnumDeclaration).filter(node => node.name.text === enumName);
+    const matchingModels = this.current.nodes.filter(ts.isEnumDeclaration).filter(node => node.name.text === enumName);
 
-    if (enumNodes.length === 0) {
+    if (matchingModels.length === 0) {
       return;
-    } else if (enumNodes.length > 1) {
+    } else if (matchingModels.length > 1) {
       throw new GenerateMetadataError(`Multiple matching enums found for '${enumName}'; please make enum names unique.`); // XXX should probably link to the (or a different) explanation page
     }
 
-    const enumDeclaration = enumNodes[0];
+    const enumDeclaration = matchingModels[0];
 
     function getEnumValue(member: ts.EnumMember) {
       if (member.initializer) {
@@ -272,7 +274,7 @@ export class TypeResolver {
   }
 
   private getReferenceType(type: ts.EntityName, extractEnum = true, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.ReferenceType { // XXX what is extractEnum supposed to do?
-    const refNameWithGenerics = this.getTypeName(this.getEntityNameFullText(type), genericTypes);
+    const refNameWithGenerics = this.getRefName(this.getEntityNameFullText(type), genericTypes);
 
     try {
       const existingType = localReferenceTypeCache[refNameWithGenerics];
@@ -326,7 +328,8 @@ export class TypeResolver {
     }
   }
 
-  private getTypeName(typeName: string, genericTypes?: ts.NodeArray<ts.TypeNode>): string {
+  private getRefName(typeName: string, genericTypes?: ts.NodeArray<ts.TypeNode>): string {
+    // XXX what is this method used for?
     if (!genericTypes || genericTypes.length === 0) {
       return typeName;
     }
@@ -337,7 +340,7 @@ export class TypeResolver {
 
         if (ts.isTypeReferenceNode(generic) && generic.typeArguments && generic.typeArguments.length > 0) {
           // ref has generics
-          refNameSection = this.getTypeName(generic.typeName.getText(), generic.typeArguments);
+          refNameSection = this.getRefName(generic.typeName.getText(), generic.typeArguments);
         } else {
           refNameSection = this.getAnyTypeName(generic);
         }
@@ -352,10 +355,10 @@ export class TypeResolver {
     return typeName + resolvedGenericNames;
   }
 
-  private getAnyTypeName(typeNode: ts.TypeNode): string {
-    const primitiveType = syntaxKindMap[typeNode.kind];
-    if (primitiveType) {
-      return primitiveType;
+  private getAnyTypeName(node: ts.TypeNode): string {
+    // XXX what is this method used for?
+    if (node.kind in primitiveSyntaxKindMap) {
+      return primitiveSyntaxKindMap[node.kind];
     }
 
     if (ts.isArrayTypeNode(node)) {
