@@ -4,7 +4,7 @@ import { MetadataGenerator } from '../../../../src/metadataGeneration/metadataGe
 import { Tsoa } from '../../../../src/metadataGeneration/tsoa';
 
 describe('Metadata generation', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').generate();
 
   describe('ControllerGenerator', () => {
     it('should generate one controller', () => {
@@ -19,13 +19,13 @@ describe('Metadata generation', () => {
       expect(() => {
         // Non existing controllers folder to get 0 controllers found error
         const NON_CONTROLLER_EXISTS_GLOB = './tests/unit/swagger';
-        new MetadataGenerator('./tests/fixtures/express-dynamic-controllers/server.ts', undefined, [], [NON_CONTROLLER_EXISTS_GLOB]).Generate();
+        new MetadataGenerator('./tests/fixtures/express-dynamic-controllers/server.ts', undefined, [], [NON_CONTROLLER_EXISTS_GLOB]).generate();
       }).to.throw(/globs found 0 controllers./);
     });
   });
 
   describe('MethodGenerator', () => {
-    const parameterMetadata = new MetadataGenerator('./tests/fixtures/controllers/methodController.ts').Generate();
+    const parameterMetadata = new MetadataGenerator('./tests/fixtures/controllers/methodController.ts').generate();
     const controller = parameterMetadata.controllers[0];
     const definedMethods = [
       'getMethod',
@@ -236,7 +236,7 @@ describe('Metadata generation', () => {
   });
 
   describe('ParameterGenerator', () => {
-    const parameterMetadata = new MetadataGenerator('./tests/fixtures/controllers/parameterController.ts').Generate();
+    const parameterMetadata = new MetadataGenerator('./tests/fixtures/controllers/parameterController.ts').generate();
     const controller = parameterMetadata.controllers[0];
 
     it('should generate a query parameter', () => {
@@ -477,7 +477,7 @@ describe('Metadata generation', () => {
   });
 
   describe('HiddenMethodGenerator', () => {
-    const parameterMetadata = new MetadataGenerator('./tests/fixtures/controllers/hiddenMethodController.ts').Generate();
+    const parameterMetadata = new MetadataGenerator('./tests/fixtures/controllers/hiddenMethodController.ts').generate();
     const controller = parameterMetadata.controllers[0];
 
     it('should generate methods visible by default', () => {

@@ -7,7 +7,7 @@ import { VerifyPathableNumberParameter, VerifyPathableParameter, VerifyPathableS
 import { VerifyPath } from '../../utilities/verifyPath';
 
 describe('GET route generation', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').generate();
   const spec = new SpecGenerator2(metadata, getDefaultOptions()).GetSpec();
   const baseRoute = '/GetTest';
 
@@ -72,7 +72,7 @@ describe('GET route generation', () => {
   });
 
   it('should generate a path for a GET route with no controller path argument', () => {
-    const pathlessMetadata = new MetadataGenerator('./tests/fixtures/controllers/pathlessGetController.ts').Generate();
+    const pathlessMetadata = new MetadataGenerator('./tests/fixtures/controllers/pathlessGetController.ts').generate();
     const pathlessSpec = new SpecGenerator2(pathlessMetadata, getDefaultOptions()).GetSpec();
     VerifyPath(pathlessSpec, '/Current', path => path.get, false);
   });
@@ -163,7 +163,7 @@ describe('GET route generation', () => {
 
   it('should reject complex types as arguments', () => {
     expect(() => {
-      const invalidMetadata = new MetadataGenerator('./tests/fixtures/controllers/invalidGetController.ts').Generate();
+      const invalidMetadata = new MetadataGenerator('./tests/fixtures/controllers/invalidGetController.ts').generate();
       new SpecGenerator2(invalidMetadata, getDefaultOptions()).GetSpec();
     }).to.throw("@Query('myModel') Can't support 'refObject' type. \n in 'InvalidGetTestController.getModelWithComplex'");
   });

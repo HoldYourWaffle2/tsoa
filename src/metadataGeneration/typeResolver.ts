@@ -2,7 +2,7 @@ import * as indexOf from 'lodash.indexof';
 import * as map from 'lodash.map';
 import * as ts from 'typescript';
 import { assertNever } from '../utils/assertNever';
-import { getJSDocComment, getJSDocTagNames, isExistJSDocTag } from './../utils/jsDocUtils';
+import { getJSDocComment, getJSDocTagNames, JSDocTagExists } from './../utils/jsDocUtils';
 import { getPropertyValidators } from './../utils/validatorUtils';
 import { GenerateMetadataError } from './exceptions';
 import { getInitializerValue } from './initializer-value';
@@ -136,7 +136,7 @@ export class TypeResolver {
       referenceType = this.getReferenceType(typeReference.typeName, this.extractEnum);
     }
 
-    this.current.AddReferenceType(referenceType);
+    this.current.addReferenceType(referenceType);
 
     // We do a hard assert in the test mode so we can catch bad ref names (https://github.com/lukeautry/tsoa/issues/398).
     //   The goal is to avoid producing these names before the code is ever merged to master (via extensive test coverage)
@@ -382,8 +382,7 @@ export class TypeResolver {
       refName,
     };
 
-    // XXX this doesn't look safe at all
-    this.current.OnFinish(referenceTypes => {
+    this.current.onFinish(referenceTypes => {
       const realReferenceType = referenceTypes[refName];
       if (!realReferenceType) {
         return;
@@ -427,7 +426,7 @@ export class TypeResolver {
 
       const moduleDeclarations = state
         .filter(ts.isModuleDeclaration)
-        .filter(this.current.IsExportedNode)
+        .filter(this.current.isExportedNode)
         .filter((node: ts.ModuleDeclaration) => node.name.text.toLowerCase() === leftmostName.toLowerCase()) as ts.ModuleDeclaration[];
 
       if (moduleDeclarations.length === 0) {
@@ -454,7 +453,7 @@ export class TypeResolver {
     const typeName = this.getEntityNameSimpleText(type);
 
     let modelTypes = statements.filter(node => {
-      if (!this.nodeIsUsable(node) || !this.current.IsExportedNode(node)) {
+      if (!this.nodeIsUsable(node) || !this.current.isExportedNode(node)) {
         return false;
       }
       return node.name!.text === typeName; // FIXME this non-null assertion is unsafe as stated by the documentation: "May be undefined in export default class { ... }"
@@ -488,7 +487,7 @@ export class TypeResolver {
       } else {
         // still multiple models left
         // Models marked with '@tsoaModel', indicating that it should be the 'canonical' model used
-        const designatedModels = modelTypes.filter(modelType => isExistJSDocTag(modelType, tag => tag.tagName.text === 'tsoaModel'));
+        const designatedModels = modelTypes.filter(modelType => JSDocTagExists(modelType, tag => tag.tagName.text === 'tsoaModel'));
 
         if (designatedModels.length === 1) {
           // a single marked-canonical model
@@ -507,7 +506,7 @@ export class TypeResolver {
 
   private getModelProperties(node: UsableDeclaration, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.Property[] {
     function isIgnored(e: ts.TypeElement | ts.ClassElement) {
-      return isExistJSDocTag(e, tag => tag.tagName.text === 'ignore');
+      return JSDocTagExists(e, tag => tag.tagName.text === 'ignore');
     }
 
     if (ts.isInterfaceDeclaration(node)) {

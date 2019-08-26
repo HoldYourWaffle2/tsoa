@@ -13,7 +13,7 @@ export class MetadataGenerator {
   private referenceTypeMap: Tsoa.ReferenceTypeMap = {};
   private circularDependencyResolvers = new Array<(referenceTypes: Tsoa.ReferenceTypeMap) => void>();
 
-  public IsExportedNode(node: ts.Node) {
+  public isExportedNode(node: ts.Node) {
     return true;
   }
 
@@ -23,7 +23,7 @@ export class MetadataGenerator {
     this.typeChecker = this.program.getTypeChecker();
   }
 
-  public Generate(): Tsoa.Metadata {
+  public generate(): Tsoa.Metadata {
     this.extractNodeFromProgramSourceFiles();
 
     const controllers = this.buildControllers();
@@ -61,28 +61,25 @@ export class MetadataGenerator {
     });
   }
 
-  public TypeChecker() {
-    return this.typeChecker;
-  }
-
-  public AddReferenceType(referenceType: Tsoa.ReferenceType) {
+  public addReferenceType(referenceType: Tsoa.ReferenceType) {
+    // XXX what is this used for? Doesn't typeResolver have its own cache?
     if (!referenceType.refName) {
       return;
     }
     this.referenceTypeMap[referenceType.refName] = referenceType;
   }
 
-  public GetReferenceType(refName: string) {
+  public getReferenceType(refName: string) {
     return this.referenceTypeMap[refName];
   }
 
-  public OnFinish(callback: (referenceTypes: Tsoa.ReferenceTypeMap) => void) {
+  public onFinish(callback: (referenceTypes: Tsoa.ReferenceTypeMap) => void) {
     this.circularDependencyResolvers.push(callback);
   }
 
   private buildControllers() {
     return this.nodes
-      .filter(node => node.kind === ts.SyntaxKind.ClassDeclaration && this.IsExportedNode(node as ts.ClassDeclaration))
+      .filter(node => node.kind === ts.SyntaxKind.ClassDeclaration && this.isExportedNode(node as ts.ClassDeclaration))
       .map((classDeclaration: ts.ClassDeclaration) => new ControllerGenerator(classDeclaration, this))
       .filter(generator => generator.IsValid())
       .map(generator => generator.Generate());

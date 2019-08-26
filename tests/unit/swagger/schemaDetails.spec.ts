@@ -5,7 +5,7 @@ import { SpecGenerator2 } from '../../../src/swagger/specGenerator2';
 import { getDefaultOptions } from '../../fixtures/defaultOptions';
 
 describe('Schema details generation', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').generate();
 
   const spec = new SpecGenerator2(metadata, getDefaultOptions()).GetSpec();
 

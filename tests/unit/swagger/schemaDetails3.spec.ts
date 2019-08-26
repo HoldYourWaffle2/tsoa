@@ -8,7 +8,7 @@ import { getDefaultOptions } from '../../fixtures/defaultOptions';
 import { TestModel } from '../../fixtures/duplicateTestModel';
 
 describe('Definition generation for OpenAPI 3.0.0', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').generate();
 
   const defaultOptions = getDefaultOptions();
   const optionsWithNoAdditional = Object.assign<{}, SwaggerConfig, Partial<SwaggerConfig>>({}, defaultOptions, {
@@ -82,7 +82,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
   describe('paths', () => {
     describe('requestBody', () => {
       it('should replace the body parameter with a requestBody', () => {
-        const metadataPost = new MetadataGenerator('./tests/fixtures/controllers/postController.ts').Generate();
+        const metadataPost = new MetadataGenerator('./tests/fixtures/controllers/postController.ts').generate();
         const specPost = new SpecGenerator3(metadataPost, getDefaultOptions()).GetSpec();
 
         if (!specPost.paths) {

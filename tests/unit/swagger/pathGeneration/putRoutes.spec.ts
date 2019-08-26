@@ -6,7 +6,7 @@ import { VerifyBodyParameter, VerifyPathableParameter } from '../../utilities/ve
 import { defaultModelName, VerifyPath } from '../../utilities/verifyPath';
 
 describe('PUT route generation', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/putController.ts').Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/putController.ts').generate();
   const spec = new SpecGenerator2(metadata, getDefaultOptions()).GetSpec();
   const baseRoute = '/PutTest';
 

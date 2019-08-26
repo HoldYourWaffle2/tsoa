@@ -6,7 +6,7 @@ import { getDefaultOptions } from '../../../fixtures/defaultOptions';
 import { VerifyPath } from '../../utilities/verifyPath';
 
 describe('Security route generation', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/securityController.ts').Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/securityController.ts').generate();
   const spec = new SpecGenerator2(metadata, getDefaultOptions()).GetSpec();
 
   it('should generate a route with a named security', () => {

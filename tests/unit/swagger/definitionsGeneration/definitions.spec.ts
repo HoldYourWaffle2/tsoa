@@ -8,8 +8,8 @@ import { getDefaultOptions } from '../../../fixtures/defaultOptions';
 import { TestModel } from '../../../fixtures/testModel';
 
 describe('Definition generation', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').Generate();
-  const dynamicMetadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts', undefined, undefined, ['./tests/fixtures/controllers/getController.ts']).Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts').generate();
+  const dynamicMetadata = new MetadataGenerator('./tests/fixtures/controllers/getController.ts', undefined, undefined, ['./tests/fixtures/controllers/getController.ts']).generate();
   const defaultOptions = getDefaultOptions();
   const optionsWithNoAdditional = Object.assign<{}, SwaggerConfig, Partial<SwaggerConfig>>({}, defaultOptions, {
     noImplicitAdditionalProperties: 'silently-remove-extras',

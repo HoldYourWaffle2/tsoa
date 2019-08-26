@@ -48,7 +48,8 @@ export function getJSDocTags(node: ts.Node, isMatching: (tag: ts.JSDocTag) => bo
   return jsDoc.tags.filter(isMatching);
 }
 
-export function isExistJSDocTag(node: ts.Node, isMatching: (tag: ts.JSDocTag) => boolean) {
+export function JSDocTagExists(node: ts.Node, isMatching: (tag: ts.JSDocTag) => boolean) {
+  // XXX casing?
   const tags = getJSDocTags(node, isMatching);
   if (tags.length === 0) {
     return false;

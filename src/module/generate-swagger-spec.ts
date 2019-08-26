@@ -33,7 +33,7 @@ export const generateSwaggerSpec = async (
   validateMutualConfigs(routesConfigRelatedToSwagger, swaggerConfig);
 
   if (!metadata) {
-    metadata = new MetadataGenerator(swaggerConfig.entryFile, compilerOptions, ignorePaths, swaggerConfig.controllerPathGlobs).Generate();
+    metadata = new MetadataGenerator(swaggerConfig.entryFile, compilerOptions, ignorePaths, swaggerConfig.controllerPathGlobs).generate();
   }
 
   let spec: Swagger.Spec;

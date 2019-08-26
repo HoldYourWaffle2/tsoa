@@ -26,7 +26,7 @@ export const generateRoutes = async (
   validateMutualConfigs(routesConfig, minimalSwaggerConfig);
 
   if (!metadata) {
-    metadata = new MetadataGenerator(routesConfig.entryFile, compilerOptions, ignorePaths, routesConfig.controllerPathGlobs).Generate();
+    metadata = new MetadataGenerator(routesConfig.entryFile, compilerOptions, ignorePaths, routesConfig.controllerPathGlobs).generate();
   }
 
   const routeGenerator = new RouteGenerator(metadata, routesConfig, exactly(minimalSwaggerConfig));

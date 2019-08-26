@@ -6,7 +6,7 @@ import { VerifyPathableParameter } from '../../utilities/verifyParameter';
 import { VerifyPath } from '../../utilities/verifyPath';
 
 describe('HEAD route generation', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/headController.ts').Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/headController.ts').generate();
   const spec = new SpecGenerator2(metadata, getDefaultOptions()).GetSpec();
   const baseRoute = '/HeadTest';
 

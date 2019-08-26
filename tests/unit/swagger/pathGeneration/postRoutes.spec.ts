@@ -7,7 +7,7 @@ import { VerifyBodyParameter, VerifyPathableParameter } from '../../utilities/ve
 import { defaultModelName, VerifyPath } from '../../utilities/verifyPath';
 
 describe('POST route generation', () => {
-  const metadata = new MetadataGenerator('./tests/fixtures/controllers/postController.ts').Generate();
+  const metadata = new MetadataGenerator('./tests/fixtures/controllers/postController.ts').generate();
   const spec = new SpecGenerator2(metadata, getDefaultOptions()).GetSpec();
   const baseRoute = '/PostTest';
 
@@ -51,7 +51,7 @@ describe('POST route generation', () => {
   it('should reject multiple body parameters', () => {
     chai
       .expect(() => {
-        const invalidMetadata = new MetadataGenerator('./tests/fixtures/controllers/invalidPostController.ts').Generate();
+        const invalidMetadata = new MetadataGenerator('./tests/fixtures/controllers/invalidPostController.ts').generate();
         new SpecGenerator2(invalidMetadata, getDefaultOptions()).GetSpec();
       })
       .to.throw("Only one body parameter allowed in 'InvalidPostTestController.postWithMultipleBodyParams' method.");
