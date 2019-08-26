@@ -44,7 +44,12 @@ export namespace Tsoa {
   }
 
   export interface Validators {
-    [key: string]: { value?: any; errorMsg?: string };
+    [key: string]: Validator;
+  }
+
+  export interface Validator {
+    value?: any;
+    errorMsg?: string;
   }
 
   export interface Security {
