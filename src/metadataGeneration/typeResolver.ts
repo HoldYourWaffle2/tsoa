@@ -48,6 +48,7 @@ export class TypeResolver {
         return {
           dataType: 'enum',
           enums: (this.typeNode.types as ts.NodeArray<ts.LiteralTypeNode>).map(type => {
+            // assertion is checked by every(ts.isLiteralTypeNode) call above
             switch (type.literal.kind) {
               case ts.SyntaxKind.TrueKeyword:
                 return 'true';
@@ -117,6 +118,7 @@ export class TypeResolver {
     }
 
     if (!this.extractEnum) {
+      // XXX why the check?
       const enumType = this.getEnumerateType(typeReference.typeName, this.extractEnum);
       if (enumType) {
         return enumType;
@@ -138,9 +140,11 @@ export class TypeResolver {
 
     this.current.addReferenceType(referenceType);
 
-    // We do a hard assert in the test mode so we can catch bad ref names (https://github.com/lukeautry/tsoa/issues/398).
-    //   The goal is to avoid producing these names before the code is ever merged to master (via extensive test coverage)
-    //   and therefore this validation does not have to run for the users
+    /*
+        We do a hard assert in the test mode so we can catch bad ref names (https://github.com/lukeautry/tsoa/issues/398).
+        The goal is to avoid producing these names before the code is ever merged to master (via extensive test coverage)
+        and therefore this validation does not have to run for the users
+    */
     if (process.env.NODE_ENV === 'tsoa_test') {
       // This regex allows underscore, hyphen, and period since those are valid in SwaggerEditor
       const symbolsRegex = /[!$%^&*()+|~=`{}\[\]:";'<>?,\/]/;
@@ -156,6 +160,7 @@ export class TypeResolver {
     return referenceType;
   }
 
+  // XXX also does void, which isn't a part of Tsoa.PrimitiveTypeLiteral, *maybe* room for improvement?
   private getPrimitiveType(typeNode: ts.TypeNode, parentNode?: ts.Node): Tsoa.Type | undefined {
     const primitiveType = primitiveSyntaxKindMap[typeNode.kind];
     if (!primitiveType) {
@@ -167,16 +172,18 @@ export class TypeResolver {
       return { dataType: primitiveType };
     } else {
       if (!parentNode) {
+        // no docs, assume double
         return { dataType: 'double' };
       }
 
       const tags = getJSDocTagNames(parentNode).filter(name => ['isInt', 'isLong', 'isFloat', 'isDouble'].includes(name));
 
       if (tags.length === 0) {
+        // no useful docs, assume double
         return { dataType: 'double' };
       }
 
-      switch (tags[0]) {
+      switch (tags[0]) { // XXX typesafe exhaustive check possible?
         case 'isInt':
           return { dataType: 'integer' };
         case 'isLong':
@@ -186,6 +193,7 @@ export class TypeResolver {
         case 'isDouble':
           return { dataType: 'double' };
         default:
+          // XXX this shouldn't default
           return { dataType: 'double' };
       }
     }
@@ -205,6 +213,13 @@ export class TypeResolver {
     }
   }
 
+  /**
+   * If `extractEnum = true` the return type will be Tsoa.ReferenceType.
+   * For `extractEnum = false` a Tsoa.EnumerateType will be returned.
+   * If there's no matching model `undefined` will be returned.
+   *
+   * This unfortunately can't be represented in Typescript itself using conditional types.
+   */
   private getEnumerateType(typeName: ts.EntityName, extractEnum = true): Tsoa.EnumerateType | Tsoa.ReferenceType | undefined {
     const enumName = this.getEntityNameSimpleText(typeName);
     const matchingModels = this.current.nodes.filter(ts.isEnumDeclaration).filter(node => node.name.text === enumName);
@@ -264,6 +279,12 @@ export class TypeResolver {
       return { dataType: 'any' };
     }
 
+    /*
+      NOTE: old method was unsafe because LiteralTypeNode.literal is:
+      `BooleanLiteral | LiteralExpression | PrefixUnaryExpression`
+      Where only LiteralExpression has the 'text' property
+    */
+
     return {
       dataType: 'enum', // XXX I assume an enum is used here to represent literal unions in swagger?
       enums: (unionTypes as ts.NodeArray<ts.LiteralTypeNode>).map(unionNode => {
@@ -277,7 +298,7 @@ export class TypeResolver {
     const refNameWithGenerics = this.getRefName(this.getEntityNameFullText(type), genericTypes);
 
     try {
-      const existingType = localReferenceTypeCache[refNameWithGenerics];
+      const existingType = localReferenceTypeCache[refNameWithGenerics]; // we have one in cache? (XXX true?)
       if (existingType) {
         return existingType;
       }
@@ -287,6 +308,8 @@ export class TypeResolver {
         localReferenceTypeCache[refNameWithGenerics] = referenceEnumType;
         return referenceEnumType;
       }
+
+      // XXX why are we checking the cache *after* we check if we have a matching enum?
 
       if (inProgressTypes.includes(refNameWithGenerics)) {
         return this.createCircularDependencyResolver(refNameWithGenerics);
@@ -366,6 +389,7 @@ export class TypeResolver {
     }
 
     if (ts.isUnionTypeNode(node)) {
+      // XXX why is a union treated as an object?
       return 'object';
     }
 
@@ -387,6 +411,8 @@ export class TypeResolver {
       if (!realReferenceType) {
         return;
       }
+
+      // XXX can this be done more elegantly?
       referenceType.description = realReferenceType.description;
       referenceType.properties = realReferenceType.properties;
       referenceType.dataType = realReferenceType.dataType;
@@ -409,7 +435,6 @@ export class TypeResolver {
   }
 
   private resolveModelTypeScope(leftmost: ts.EntityName, statements: ts.Node[]): ts.NodeArray<ts.Node> {
-    // CHECK correct any narrowing?
     /*
       WHILE (there are more quantifiers)
         Resolve next quantifier using the statements in the 'state'
@@ -675,7 +700,7 @@ export class TypeResolver {
     return properties;
   }
 
-  private hasPublicModifier(node: ts.Node) {
+  private hasPublicModifier(node: ts.Node) { // XXX isn't this function name a little misleading?
     return !node.modifiers || node.modifiers.every(modifier => modifier.kind !== ts.SyntaxKind.ProtectedKeyword && modifier.kind !== ts.SyntaxKind.PrivateKeyword);
   }
 

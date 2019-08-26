@@ -35,7 +35,9 @@ export function getJSDocTagNames(node: ts.Node) {
 }
 
 export function getJSDocTags(node: ts.Node, isMatching: (tag: ts.JSDocTag) => boolean) {
-  const jsDocs = (node as any).jsDoc as ts.JSDoc[];
+  // FIXME this method shouldn't be working, there is no 'jsDoc' property on any kind of Node
+
+  const jsDocs = (node as any).jsDoc as ts.JSDoc[]; // not all ts.Node's can have jsDoc, but we want to accept them all
   if (!jsDocs || jsDocs.length === 0) {
     return [];
   }

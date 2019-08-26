@@ -97,6 +97,8 @@ export namespace Tsoa {
 
   export type RefTypeLiteral = 'refObject' | 'refEnum';
 
+  // XXX maybe Pick the primitives since they're unlikely to change?
+  // XXX dates are primitives?
   export type PrimitiveTypeLiteral = Exclude<TypeStringLiteral, RefTypeLiteral | 'enum' | 'array' | 'void' | 'union' | 'intersection'>;
 
   export interface Type {
@@ -104,6 +106,7 @@ export namespace Tsoa {
   }
 
   export interface RefTypeMinimal {
+    // XXX redundant superinterface?
     dataType: RefTypeLiteral;
   }
 
@@ -119,11 +122,11 @@ export namespace Tsoa {
 
   export interface ReferenceType extends Type, RefTypeMinimal {
     description?: string;
-    dataType: RefTypeLiteral;
+    dataType: RefTypeLiteral; // XXX already specified by (redundant) parent?
     refName: string;
     properties?: Property[];
     additionalProperties?: Type;
-    enums?: string[];
+    enums?: string[]; // XXX what does this property mean for refObject's?
     example?: any;
   }
 
