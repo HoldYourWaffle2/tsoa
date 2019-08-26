@@ -470,10 +470,8 @@ export class TypeResolver {
   }
 
   private getModelTypeDeclaration(type: ts.EntityName): UsableDeclaration {
-    const leftmostIdentifier = this.resolveLeftmostIdentifier(type);
-    const statements: ts.NodeArray<ts.Node> = this.resolveModelTypeScope(leftmostIdentifier, this.current.nodes);
-
-    const typeName = type.kind === ts.SyntaxKind.Identifier ? (type as ts.Identifier).text : (type as ts.QualifiedName).right.text;
+    const statements: ts.NodeArray<ts.Node> = this.resolveModelTypeScope(this.resolveLeftmostIdentifier(type), this.current.nodes);
+    const typeName = this.getEntityNameSimpleText(type);
 
     let modelTypes = statements.filter(node => {
       if (!this.nodeIsUsable(node) || !this.current.IsExportedNode(node)) {
@@ -482,50 +480,49 @@ export class TypeResolver {
       return node.name!.text === typeName; // FIXME this non-null assertion is unsafe as stated by the documentation: "May be undefined in export default class { ... }"
     }) as UsableDeclaration[];
 
-    if (!modelTypes.length) {
+    if (modelTypes.length === 0) {
       throw new GenerateMetadataError(
         `No matching model found for referenced type ${typeName}. If ${typeName} comes from a dependency, please create an interface in your own code that has the same structure. Tsoa can not utilize interfaces from external dependencies. Read more at https://github.com/lukeautry/tsoa/blob/master/ExternalInterfacesExplanation.MD`,
       );
-    }
-
-    if (modelTypes.length > 1) {
-      // remove types that are from typescript e.g. 'Account'
-      modelTypes = modelTypes.filter(modelType => {
-        if (
-          modelType
+    } else if (modelTypes.length === 1) {
+      // exactly one match, easy
+      return modelTypes[0];
+    } else {
+      // multiple matching models
+      // remove types that are from typescript e.g. 'Account' (XXX this means that non-TS types have priority, this makes sense but is it documented?)
+      modelTypes = modelTypes.filter(
+        modelType =>
+          !modelType
             .getSourceFile()
             .fileName.replace(/\\/g, '/')
             .toLowerCase()
-            .indexOf('node_modules/typescript') > -1
-        ) {
-          return false;
-        }
+            .includes('node_modules/typescript'), // XXX this breaks if you're using a forked compiler, but I don't think that's an edge case worth solving
+      );
 
-        return true;
-      });
+      if (modelTypes.length === 0) {
+        // FIXME Uncovered edge case: a model with a name that exists twice in the standard library
+        throw new GenerateMetadataError(`Multiple standard library models with name ${typeName}`); // obviously not a proper error message
+      } else if (modelTypes.length === 1) {
+        // there's only one "user-made" match
+        return modelTypes[0];
+      } else {
+        // still multiple models left
+        // Models marked with '@tsoaModel', indicating that it should be the 'canonical' model used
+        const designatedModels = modelTypes.filter(modelType => isExistJSDocTag(modelType, tag => tag.tagName.text === 'tsoaModel'));
 
-      /**
-       * Model is marked with '@tsoaModel', indicating that it should be the 'canonical' model used
-       */
-      const designatedModels = modelTypes.filter(modelType => {
-        const isDesignatedModel = isExistJSDocTag(modelType, tag => tag.tagName.text === 'tsoaModel');
-        return isDesignatedModel;
-      });
-
-      if (designatedModels.length > 0) {
-        if (designatedModels.length > 1) {
+        if (designatedModels.length === 1) {
+          // a single marked-canonical model
+          return designatedModels[0];
+        } else if (designatedModels.length > 1) {
+          // multiple marked-canonical models
           throw new GenerateMetadataError(`Multiple models for ${typeName} marked with '@tsoaModel'; '@tsoaModel' should only be applied to one model.`);
+        } else {
+          // no marked-canonical model
+          const conflicts = modelTypes.map(modelType => modelType.getSourceFile().fileName).join('"; "');
+          throw new GenerateMetadataError(`Multiple matching models found for referenced type ${typeName}; please make model names unique. Conflicts found: "${conflicts}".`);
         }
-
-        modelTypes = designatedModels;
       }
     }
-    if (modelTypes.length > 1) {
-      const conflicts = modelTypes.map(modelType => modelType.getSourceFile().fileName).join('"; "');
-      throw new GenerateMetadataError(`Multiple matching models found for referenced type ${typeName}; please make model names unique. Conflicts found: "${conflicts}".`);
-    }
-
-    return modelTypes[0];
   }
 
   private getModelProperties(node: UsableDeclaration, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.Property[] {
