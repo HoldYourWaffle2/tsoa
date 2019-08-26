@@ -42,9 +42,7 @@ export class TypeResolver {
     }
 
     if (ts.isUnionTypeNode(this.typeNode)) {
-      const supportType = this.typeNode.types.every(type => ts.isLiteralTypeNode(type));
-
-      if (supportType) {
+      if (this.typeNode.types.every(ts.isLiteralTypeNode)) {
         return {
           dataType: 'enum',
           enums: (this.typeNode.types as ts.NodeArray<ts.LiteralTypeNode>).map(type => {
@@ -59,25 +57,17 @@ export class TypeResolver {
           }),
         };
       } else {
-        const types = this.typeNode.types.map(type => {
-          return new TypeResolver(type, this.current, this.parentNode, this.extractEnum).resolve();
-        });
-
         return {
           dataType: 'union',
-          types,
+          types: this.typeNode.types.map(type => new TypeResolver(type, this.current, this.parentNode, this.extractEnum).resolve()),
         };
       }
     }
 
     if (ts.isIntersectionTypeNode(this.typeNode)) {
-      const types = this.typeNode.types.map(type => {
-        return new TypeResolver(type, this.current, this.parentNode, this.extractEnum).resolve();
-      });
-
       return {
         dataType: 'intersection',
-        types,
+        types: this.typeNode.types.map(type => new TypeResolver(type, this.current, this.parentNode, this.extractEnum).resolve()),
       };
     }
 
@@ -290,8 +280,7 @@ export class TypeResolver {
   }
 
   private getReferenceType(type: ts.EntityName, extractEnum = true, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.ReferenceType {
-    const typeName = this.getEntityNameFullText(type);
-    const refNameWithGenerics = this.getTypeName(typeName, genericTypes);
+    const refNameWithGenerics = this.getRefName(this.getEntityNameFullText(type), genericTypes);
 
     try {
       const existingType = localReferenceTypeCache[refNameWithGenerics];
@@ -368,11 +357,10 @@ export class TypeResolver {
         }
       },
       [] as string[],
-    );
+    )
+      .join('');
 
-    const finalName = typeName + resolvedName.join('');
-
-    return finalName;
+    return typeName + resolvedGenericNames;
   }
 
   private getAnyTypeName(typeNode: ts.TypeNode): string {
