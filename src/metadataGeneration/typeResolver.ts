@@ -271,8 +271,8 @@ export class TypeResolver {
     };
   }
 
-  private getReferenceType(type: ts.EntityName, extractEnum = true, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.ReferenceType {
-    const refNameWithGenerics = this.getRefName(this.getEntityNameFullText(type), genericTypes);
+  private getReferenceType(type: ts.EntityName, extractEnum = true, genericTypes?: ts.NodeArray<ts.TypeNode>): Tsoa.ReferenceType { // XXX what is extractEnum supposed to do?
+    const refNameWithGenerics = this.getTypeName(this.getEntityNameFullText(type), genericTypes);
 
     try {
       const existingType = localReferenceTypeCache[refNameWithGenerics];
@@ -337,7 +337,7 @@ export class TypeResolver {
 
         if (ts.isTypeReferenceNode(generic) && generic.typeArguments && generic.typeArguments.length > 0) {
           // ref has generics
-          refNameSection = this.getRefName(generic.typeName.getText(), generic.typeArguments);
+          refNameSection = this.getTypeName(generic.typeName.getText(), generic.typeArguments);
         } else {
           refNameSection = this.getAnyTypeName(generic);
         }
