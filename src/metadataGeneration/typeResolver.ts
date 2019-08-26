@@ -223,7 +223,7 @@ export class TypeResolver {
     const enumName = this.getEntityNameSimpleText(typeName);
     const enumNodes = this.current.nodes.filter(node => node.kind === ts.SyntaxKind.EnumDeclaration).filter(node => (node as any).name.text === enumName);
 
-    if (!enumNodes.length) {
+    if (enumNodes.length === 0) {
       return;
     }
     if (enumNodes.length > 1) {
@@ -267,7 +267,7 @@ export class TypeResolver {
       .filter(node => ts.isUnionTypeNode(node.type) && node.type.types)
       .filter(node => node.name.text === literalName);
 
-    if (!literalTypes.length) {
+    if (literalTypes.length === 0) {
       return;
     }
     if (literalTypes.length > 1) {
@@ -351,7 +351,7 @@ export class TypeResolver {
   }
 
   private getTypeName(typeName: string, genericTypes?: ts.NodeArray<ts.TypeNode>): string {
-    if (!genericTypes || !genericTypes.length) {
+    if (!genericTypes || genericTypes.length === 0) {
       return typeName;
     }
 
@@ -450,7 +450,7 @@ export class TypeResolver {
         .filter(this.current.IsExportedNode)
         .filter((node: ts.ModuleDeclaration) => node.name.text.toLowerCase() === leftmostName.toLowerCase()) as ts.ModuleDeclaration[];
 
-      if (!moduleDeclarations.length) {
+      if (moduleDeclarations.length === 0) {
         throw new GenerateMetadataError(`No matching module declarations found for ${leftmostName}.`);
       }
       if (moduleDeclarations.length > 1) {
