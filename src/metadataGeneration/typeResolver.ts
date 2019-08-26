@@ -20,7 +20,7 @@ const inProgressTypes: { [typeName: string]: boolean } = {};
 type UsableDeclaration = ts.InterfaceDeclaration | ts.ClassDeclaration | ts.TypeAliasDeclaration;
 
 export class TypeResolver {
-  constructor(private readonly typeNode: ts.TypeNode, private readonly current: MetadataGenerator, private readonly parentNode?: ts.Node, private readonly extractEnum = true) {}
+  constructor(private readonly typeNode: ts.TypeNode, private readonly current: MetadataGenerator, private readonly parentNode?: ts.Node, private readonly extractEnum = true) { }
 
   public static clearCache() {
     Object.keys(localReferenceTypeCache).forEach(key => {
@@ -158,8 +158,8 @@ export class TypeResolver {
       if (symbolsRegex.test(referenceType.refName)) {
         throw new Error(
           `Problem with creating refName ${referenceType.refName} since we should not allow symbols in ref names ` +
-            `because it would cause invalid swagger.yaml to be created. This is due to the swagger rule ` +
-            `"ref values must be RFC3986-compliant percent-encoded URIs."`,
+          `because it would cause invalid swagger.yaml to be created. This is due to the swagger rule ` +
+          `"ref values must be RFC3986-compliant percent-encoded URIs."`,
         );
       }
     }

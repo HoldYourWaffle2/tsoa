@@ -29,7 +29,7 @@ export class RouteGenerator {
     vscode: true,
   };
 
-  constructor(private readonly metadata: Tsoa.Metadata, private readonly options: RoutesConfig, private readonly minimalSwaggerConfig: SwaggerConfigRelatedToRoutes) {}
+  constructor(private readonly metadata: Tsoa.Metadata, private readonly options: RoutesConfig, private readonly minimalSwaggerConfig: SwaggerConfigRelatedToRoutes) { }
 
   public async GenerateRoutes(middlewareTemplate: string, pathTransformer: (path: string) => string) {
     if (!fs.lstatSync(this.options.routesDir).isDirectory()) {

@@ -8,7 +8,7 @@ import { Tsoa } from './tsoa';
 import { TypeResolver } from './typeResolver';
 
 export class ParameterGenerator {
-  constructor(private readonly parameter: ts.ParameterDeclaration, private readonly method: string, private readonly path: string, private readonly current: MetadataGenerator) {}
+  constructor(private readonly parameter: ts.ParameterDeclaration, private readonly method: string, private readonly path: string, private readonly current: MetadataGenerator) { }
 
   public Generate(): Tsoa.Parameter {
     const decoratorName = getDecoratorName(this.parameter, identifier => this.supportParameterDecorator(identifier.text));

@@ -5,7 +5,7 @@ import { assertNever } from './../utils/assertNever';
 import { Swagger } from './swagger';
 
 export abstract class SpecGenerator {
-  constructor(protected readonly metadata: Tsoa.Metadata, protected readonly config: SwaggerConfig) {}
+  constructor(protected readonly metadata: Tsoa.Metadata, protected readonly config: SwaggerConfig) { }
 
   protected buildAdditionalProperties(type: Tsoa.Type) {
     return this.getSwaggerType(type);

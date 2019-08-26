@@ -19,7 +19,7 @@ export function ValidateParam(
 }
 
 export class ValidationService {
-  constructor(private readonly models: TsoaRoute.Models) {}
+  constructor(private readonly models: TsoaRoute.Models) { }
 
   public ValidateParam(property: TsoaRoute.PropertySchema, value: any, name = '', fieldErrors: FieldErrors, parent = '', minimalSwaggerConfig: SwaggerConfigRelatedToRoutes) {
     if (value === undefined || value === null) {
@@ -392,8 +392,8 @@ export class ValidationService {
     if (!subSchemas) {
       throw new Error(
         'internal tsoa error: ' +
-          'the metadata that was generated should have had sub schemas since it’s for a union, however it did not. ' +
-          'Please file an issue with tsoa at https://github.com/lukeautry/tsoa/issues',
+        'the metadata that was generated should have had sub schemas since it’s for a union, however it did not. ' +
+        'Please file an issue with tsoa at https://github.com/lukeautry/tsoa/issues',
       );
     }
 
@@ -429,8 +429,8 @@ export class ValidationService {
     if (!subSchemas) {
       throw new Error(
         'internal tsoa error: ' +
-          'the metadata that was generated should have had sub schemas since it’s for a intersection, however it did not. ' +
-          'Please file an issue with tsoa at https://github.com/lukeautry/tsoa/issues',
+        'the metadata that was generated should have had sub schemas since it’s for a intersection, however it did not. ' +
+        'Please file an issue with tsoa at https://github.com/lukeautry/tsoa/issues',
       );
     }
 
@@ -676,6 +676,6 @@ export class ValidateError implements Exception {
   public status = 400;
   public name = 'ValidateError';
 
-  constructor(public fields: FieldErrors, public message: string) {}
+  constructor(public fields: FieldErrors, public message: string) { }
 }
 export * from './tsoa-route';
