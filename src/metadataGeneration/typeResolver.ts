@@ -15,8 +15,8 @@ syntaxKindMap[ts.SyntaxKind.StringKeyword] = 'string';
 syntaxKindMap[ts.SyntaxKind.BooleanKeyword] = 'boolean';
 syntaxKindMap[ts.SyntaxKind.VoidKeyword] = 'void';
 
-const localReferenceTypeCache: { [typeName: string]: Tsoa.ReferenceType } = {};
-const inProgressTypes: { [typeName: string]: boolean } = {};
+const localReferenceTypeCache: { [typeName: string]: Tsoa.ReferenceType } = {}; // XXX why is it called 'localReferenceTypeCache'? Aren't type resolutions done globally (causing the duplicate model name issue)?
+const inProgressTypes: string[] = [];
 
 type UsableDeclaration = ts.InterfaceDeclaration | ts.ClassDeclaration | ts.TypeAliasDeclaration | ts.EnumDeclaration;
 
@@ -24,13 +24,8 @@ export class TypeResolver {
   constructor(private readonly typeNode: ts.TypeNode, private readonly current: MetadataGenerator, private readonly parentNode?: ts.Node, private readonly extractEnum = true) { }
 
   public static clearCache() {
-    Object.keys(localReferenceTypeCache).forEach(key => {
-      delete localReferenceTypeCache[key];
-    });
-
-    Object.keys(inProgressTypes).forEach(key => {
-      delete inProgressTypes[key];
-    });
+    Object.keys(localReferenceTypeCache).forEach(key => delete localReferenceTypeCache[key]);
+    inProgressTypes.splice(0);
   }
 
   public resolve(): Tsoa.Type | Tsoa.ArrayType | Tsoa.EnumerateType | Tsoa.UnionType | Tsoa.IntersectionType {
@@ -310,11 +305,12 @@ export class TypeResolver {
         return referenceEnumType;
       }
 
-      if (inProgressTypes[refNameWithGenerics]) {
+
+      if (inProgressTypes.includes(refNameWithGenerics)) {
         return this.createCircularDependencyResolver(refNameWithGenerics);
       }
 
-      inProgressTypes[refNameWithGenerics] = true;
+      inProgressTypes.push(refNameWithGenerics);
 
       const modelType = this.getModelTypeDeclaration(type);
       const properties = this.getModelProperties(modelType, genericTypes);
