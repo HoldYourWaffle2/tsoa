@@ -1,6 +1,7 @@
 import * as indexOf from 'lodash.indexof';
 import * as map from 'lodash.map';
 import * as ts from 'typescript';
+import { assertNever } from '../utils/assertNever';
 import { getJSDocComment, getJSDocTagNames, isExistJSDocTag } from './../utils/jsDocUtils';
 import { getPropertyValidators } from './../utils/validatorUtils';
 import { GenerateMetadataError } from './exceptions';
@@ -640,7 +641,18 @@ export class TypeResolver {
           validators: getPropertyValidators(property as ts.PropertyDeclaration),
         };
       });
+    } else if (ts.isEnumDeclaration(node)) {
+      /*
+        FIXME no implementation
+        this.isNodeUsable has always returned true for enum declarations
+        This method is used in this.getModelTypeDeclaration to assert the UsableDeclaration type
+        This means that UsableDeclaration should include ts.EnumDeclaration
+      */
+      throw new Error('Unimplemented code path');
+    } else {
+      return assertNever(node);
     }
+  }
 
   private getModelAdditionalPropertiesType(node: UsableDeclaration): Tsoa.Type | undefined {
     if (!ts.isInterfaceDeclaration(node)) {
