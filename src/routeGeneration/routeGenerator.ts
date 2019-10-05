@@ -41,7 +41,7 @@ export class RouteGenerator {
       return JSON.stringify(context);
     });
 
-    handlebars.registerHelper('importController', (controller: any) => { // FIXME liberal any usage, should be the same type as at line 101-126
+    handlebars.registerHelper('importControllers', (controllers: any[]) => { // FIXME liberal any usage, should be the same type as at line 101-126
       const imports: { [file: string]: string[] } = {};
 
       function addType(type: Tsoa.Type) { // CHECK correct type? parallel typings somewhere?
@@ -70,12 +70,14 @@ export class RouteGenerator {
         }
       }
 
-      for (const action of controller.actions) {
-        addType(action.type);
+      for (const controller of controllers) {
+        for (const action of controller.actions) {
+          addType(action.type);
 
-        Object.keys(action.parameters).forEach(parameterName => {
-          addType(action.parameters[parameterName]);
-        });
+          Object.keys(action.parameters).forEach(parameterName => {
+            addType(action.parameters[parameterName]);
+          });
+        }
       }
 
       return Object.keys(imports).map(file => {
